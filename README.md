@@ -1,4 +1,4 @@
-# Local\_API\_AI
+# Local_API_AI
 
 
 
@@ -10,7 +10,7 @@ LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任
 
 
 
-\## 功能
+## 功能
 
 | 功能 | 說明 |
 
@@ -32,35 +32,21 @@ LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任
 
 
 
-\###  🛠️ 技術架構
+###  🛠️ 技術架構
 
-\* .NET 8 為基礎 Web API 框架，使用 Minimal API 寫法
+* .NET 8 為基礎 Web API 框架，使用 Minimal API 寫法
 
-\* ONNX Runtime 加速推論，支援跨平台部署（已內建所有 native lib）
+* ONNX Runtime 加速推論，支援跨平台部署（已內建所有 native lib）
 
-\* Tesseract OCR 提供準確的圖片文字辨識
+* Tesseract OCR 提供準確的圖片文字辨識
 
-\* 依賴注入 DI 架構：所有服務統一註冊與解耦
+* 依賴注入 DI 架構：所有服務統一註冊與解耦
 
-\* Swagger 自動化 API 文件與測試介面
+* Swagger 自動化 API 文件與測試介面
 
-\* 中介軟體 Middleware：提供全域錯誤攔截與記錄
+* 中介軟體 Middleware：提供全域錯誤攔截與記錄
 
-\* 內建前端 index.html：可快速測試各項 AI 功能
-
-
-
-----------------------------
-
-
-
-\### 🔒 安全性與隱私
-
-\* 所有 AI 處理皆在本地進行，無資料上傳雲端
-
-\* 適合需要保密性與資料自主權的企業內部使用場景
-
-\* 可離線部署於封閉網路環境
+* 內建前端 index.html：可快速測試各項 AI 功能
 
 
 
@@ -68,13 +54,13 @@ LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任
 
 
 
-\### 🚀 效能與體驗
+### 🔒 安全性與隱私
 
-\* ONNX 模型 + 本地 OCR，不需等待雲端延遲
+* 所有 AI 處理皆在本地進行，無資料上傳雲端
 
-\* 快速響應，低記憶體需求
+* 適合需要保密性與資料自主權的企業內部使用場景
 
-\* 可擴充其他 AI 模型，只需實作 `IAIService` 介面即可
+* 可離線部署於封閉網路環境
 
 
 
@@ -82,7 +68,21 @@ LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任
 
 
 
-\### 💰 成本與部署
+### 🚀 效能與體驗
+
+* ONNX 模型 + 本地 OCR，不需等待雲端延遲
+
+* 快速響應，低記憶體需求
+
+* 可擴充其他 AI 模型，只需實作 `IAIService` 介面即可
+
+
+
+----------------------------
+
+
+
+### 💰 成本與部署
 
 | 項目      | 狀態                       |
 
@@ -110,7 +110,7 @@ LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任
 
 
 
-\### 📂 專案結構
+### 📂 專案結構
 
 ```bash
 
@@ -140,7 +140,7 @@ LocalAIAgentAPI/
 
 
 
-\### 🧪 快速測試
+### 🧪 快速測試
 
 
 
@@ -170,7 +170,7 @@ http://localhost:5136/swagger
 
 
 
-\### 🧠 API 端點
+### 🧠 API 端點
 
 
 
@@ -192,15 +192,15 @@ http://localhost:5136/swagger
 
 
 
-\### 🧰 CI/CD
+### 🧰 CI/CD
 
 內建 GitHub Actions：
 
-\* dotnet build
+* dotnet build
 
-\* dotnet test（如需擴充）
+* dotnet test（如需擴充）
 
-\* 自動化部署可加上 publish 參數
+* 自動化部署可加上 publish 參數
 
 
 
@@ -208,7 +208,7 @@ http://localhost:5136/swagger
 
 
 
-\### 🔧 延伸與自定義
+### 🔧 延伸與自定義
 
 新增 AI 模型？→ 實作一個 `IAIService`，加到 `AIServiceFactory`
 
