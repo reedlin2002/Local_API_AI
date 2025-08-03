@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 多模型測試頁 - 水墨雅韻</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* 水墨背景效果 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(ellipse at 20% 20%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 30%, rgba(0, 0, 0, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse at 40% 80%, rgba(0, 0, 0, 0.06) 0%, transparent 40%),
+        radial-gradient(ellipse at 70% 70%, rgba(0, 0, 0, 0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* 飄動的水墨點 */
+    .ink-drops {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .ink-drop {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      animation: inkFloat 8s ease-in-out infinite;
+    }
+
+    @keyframes inkFloat {
+      0%, 100% { 
+        transform: translateY(0px) scale(1);
+        opacity: 0.1;
+      }
+      50% { 
+        transform: translateY(-30px) scale(1.5);
+        opacity: 0.3;
+      }
+    }
+
+    main {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0;
+      padding: 3rem;
+      max-width: 650px;
+      width: 100%;
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 主容器的水墨邊框效果 */
+    main::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(45deg, 
+        rgba(0, 0, 0, 0.2) 0%, 
+        rgba(0, 0, 0, 0.1) 25%, 
+        rgba(0, 0, 0, 0.05) 50%, 
+        rgba(0, 0, 0, 0.1) 75%, 
+        rgba(0, 0, 0, 0.2) 100%);
+      z-index: -1;
+      filter: blur(1px);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: #2c3e50;
+      letter-spacing: 2px;
+      position: relative;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 標題下方的水墨筆觸 */
+    h1::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.8), transparent);
+      border-radius: 2px;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      color: #6c757d;
+      font-size: 1.2rem;
+      font-weight: 400;
+      letter-spacing: 1px;
+      position: relative;
+    }
+
+    .subtitle::before,
+    .subtitle::after {
+      content: '◆';
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(0, 0, 0, 0.3);
+      font-size: 0.8rem;
+    }
+
+    .subtitle::before {
+      left: -30px;
+    }
+
+    .subtitle::after {
+      right: -30px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      position: relative;
+    }
+
+    label {
+      color: #2c3e50;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.5px;
+      position: relative;
+      padding-left: 1rem;
+    }
+
+    label::before {
+      content: '●';
+      position: absolute;
+      left: 0;
+      color: rgba(0, 0, 0, 0.6);
+      font-size: 0.8rem;
+    }
+
+    select, input[type="file"], input[type="text"] {
+      padding: 1.2rem 1.5rem;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-radius: 0;
+      color: #2c3e50;
+      font-family: 'Noto Serif TC', serif;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    select:focus, input:focus {
+      outline: none;
+      border-color: rgba(0, 0, 0, 0.4);
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.1),
+        0 0 0 3px rgba(0, 0, 0, 0.05);
+    }
+
+    select option {
+      background: #fff;
+      color: #2c3e50;
+      padding: 0.5rem;
+    }
+
+    input::placeholder {
+      color: rgba(44, 62, 80, 0.5);
+      font-style: italic;
+    }
+
+    button {
+      padding: 1.5rem 2rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      color: white;
+      border: none;
+      border-radius: 0;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+      font-family: 'Noto Serif TC', serif;
+      letter-spacing: 1px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.6s ease;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #result {
+      margin-top: 2rem;
+      padding: 2rem;
+      background: rgba(248, 249, 250, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-left: 4px solid rgba(0, 0, 0, 0.6);
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: "Source Code Pro", "Courier New", monospace;
+      color: #2c3e50;
+      font-size: 0.9rem;
+      line-height: 1.8;
+      animation: fadeIn 0.6s ease-out;
+      position: relative;
+    }
+
+    #result::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, 
+        rgba(0, 0, 0, 0.8) 0%, 
+        rgba(0, 0, 0, 0.4) 50%, 
+        rgba(0, 0, 0, 0.8) 100%);
+    }
+
+    @keyframes fadeIn {
+      from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+
+    .input-hidden {
+      display: none !important;
+    }
+
+    .processing {
+      position: relative;
+    }
+
+    .processing::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      main {
+        padding: 2rem;
+        margin: 1rem;
+      }
+      
+      h1 {
+        font-size: 2.2rem;
+      }
+      
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .subtitle::before,
+      .subtitle::after {
+        display: none;
+      }
+    }
+
+    /* 滾動條水墨風格 */
+    #result::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #result::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    #result::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 0;
+    }
+
+    #result::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    /* 水墨暈染效果 */
+    .ink-wash {
+      position: relative;
+    }
+
+    .ink-wash::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
+        radial-gradient(circle at 70% 70%, rgba(0, 0, 0, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    /* 文字選擇效果 */
+    ::selection {
+      background: rgba(0, 0, 0, 0.1);
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+  <div class="ink-drops" id="inkDrops"></div>
+  
+  <main class="ink-wash">
+    <h1>AI 多模型測試</h1>
+    <div class="subtitle">探索智慧之源，揮灑數位丹青</div>
+    
+    <form id="uploadForm">
+      <div class="form-group">
+        <label for="actionSelect">選擇 AI 模型</label>
+        <select id="actionSelect" required>
+          <option value="imageclassifier">圖片分類 · 識別萬物</option>
+          <option value="textgeneration">文字生成 · 筆墨生花</option>
+          <option value="describe">影像描述 · 繪聲繪影</option>
+          <option value="ocr">OCR文字辨識 · 洞察秋毫</option>
+          <option value="agent">智慧問答 Agent · 博古通今</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label id="fileLabel" for="fileInput">上傳圖片檔案</label>
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <div class="form-group">
+        <label id="promptLabel" for="promptInput">輸入提示文字</label>
+        <input type="text" id="promptInput" placeholder="請在此處輸入您的提示文字..." />
+      </div>
+
+      <div class="form-group">
+        <label id="outputFormatLabel" for="outputFormatSelect">輸出格式</label>
+        <select id="outputFormatSelect">
+          <option value="text">純文字格式</option>
+          <option value="json">JSON 結構化格式</option>
+        </select>
+      </div>
+
+      <button type="submit">
+        開始處理
+      </button>
+    </form>
+
+    <div id="result">墨硯已備，靜待您的指令...</div>
+  </main>
+
+  <script>
+    // 創建水墨點效果
+    function createInkDrops() {
+      const container = document.getElementById('inkDrops');
+      for (let i = 0; i < 30; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'ink-drop';
+        drop.style.left = Math.random() * 100 + '%';
+        drop.style.top = Math.random() * 100 + '%';
+        drop.style.animationDelay = Math.random() * 8 + 's';
+        drop.style.animationDuration = (Math.random() * 4 + 8) + 's';
+        drop.style.opacity = Math.random() * 0.3 + 0.1;
+        container.appendChild(drop);
+      }
+    }
+
+    createInkDrops();
+
+    const actionSelect = document.getElementById('actionSelect');
+    const fileInput = document.getElementById('fileInput');
+    const promptInput = document.getElementById('promptInput');
+    const outputFormatSelect = document.getElementById('outputFormatSelect');
+    const resultDiv = document.getElementById('result');
+
+    function toggleInputs() {
+      const action = actionSelect.value;
+
+      // 重置所有輸入欄位
+      fileInput.parentElement.classList.add('input-hidden');
+      promptInput.parentElement.classList.add('input-hidden');
+      outputFormatSelect.parentElement.classList.add('input-hidden');
+
+      // 根據選擇的動作顯示對應的輸入欄位
+      if (action === 'imageclassifier' || action === 'describe' || action === 'ocr') {
+        fileInput.parentElement.classList.remove('input-hidden');
+      }
+      if (action === 'textgeneration' || action === 'agent') {
+        promptInput.parentElement.classList.remove('input-hidden');
+      }
+      if (action === 'agent') {
+        outputFormatSelect.parentElement.classList.remove('input-hidden');
+      }
+
+      resultDiv.textContent = '墨硯已備，靜待您的指令...';
+    }
+
+    actionSelect.addEventListener('change', toggleInputs);
+    toggleInputs();
+
+    document.getElementById('uploadForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      
+      const button = e.target.querySelector('button');
+      button.classList.add('processing');
+      button.disabled = true;
+      button.textContent = '正在處理中...';
+      
+      resultDiv.textContent = '筆墨正濃，AI 正在為您潛心創作...';
+
+      const action = actionSelect.value;
+      const file = fileInput.files[0];
+      const prompt = promptInput.value.trim();
+      const outputFormat = outputFormatSelect.value;
+
+      const formData = new FormData();
+      let url = '';
+      let isJson = true;
+
+      try {
+        if (action === 'imageclassifier') {
+          if (!file) {
+            throw new Error('請選擇圖片檔案');
+          }
+          formData.append('model', 'imageclassifier');
+          formData.append('file', file);
+          url = 'http://localhost:5136/api/ai';
+          isJson = true;
+        } else if (action === 'textgeneration') {
+          if (!prompt) {
+            throw new Error('請輸入提示文字');
+          }
+          formData.append('model', 'textgeneration');
+          formData.append('prompt', prompt);
+          url = 'http://localhost:5136/api/ai';
+          isJson = false;
+        } else if (action === 'describe') {
+          if (!file) {
+            throw new Error('請選擇圖片檔案');
+          }
+          formData.append('file', file);
+          url = 'http://localhost:5136/api/ai/describe-image';
+          isJson = true;
+        } else if (action === 'ocr') {
+          if (!file) {
+            throw new Error('請選擇圖片檔案');
+          }
+          formData.append('file', file);
+          url = 'http://localhost:5136/api/ai/ocr';
+          isJson = true;
+        } else if (action === 'agent') {
+          if (!prompt) {
+            throw new Error('請輸入提示文字');
+          }
+          url = 'http://localhost:5136/api/ai/ask';
+          isJson = outputFormat === 'json';
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, output: outputFormat })
+          });
+
+          if (!res.ok) {
+            throw new Error(`伺服器回應錯誤: ${res.status}`);
+          }
+
+          const raw = isJson ? await res.json() : await res.text();
+          resultDiv.textContent = isJson ? JSON.stringify(raw, null, 2) : raw;
+          return;
+        }
+
+        // 處理非 Agent 模式
+        const res = await fetch(url, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!res.ok) {
+          throw new Error(`伺服器回應錯誤: ${res.status}`);
+        }
+
+        let output = '';
+        if (isJson) {
+          const json = await res.json();
+
+          if (action === 'describe' && json.description) {
+            output = json.description;
+          } else if (action === 'ocr' && json.text) {
+            output = json.text;
+          } else {
+            output = JSON.stringify(json, null, 2);
+          }
+        } else {
+          output = await res.text();
+        }
+
+        resultDiv.textContent = output;
+
+      } catch (err) {
+        resultDiv.textContent = '失敗: ' + err.message;
+      } finally {
+        button.classList.remove('processing');
+        button.disabled = false;
+        button.textContent = '開始處理';
+      }
+    });
+  </script>
+</body>
+</html>

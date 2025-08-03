@@ -1,0 +1,15 @@
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\appsettings.Development.json
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\appsettings.json
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\LocalAIAgentAPI.pdb
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\onnxruntime.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\onnxruntime_providers_shared.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\Models\imagenet_labels.txt
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\Models\resnet50-v2-7.onnx
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\x86\leptonica-1.82.0.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\x86\tesseract50.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\x64\leptonica-1.82.0.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\x64\tesseract50.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\aspnetcorev2_inprocess.dll
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\onnxruntime.lib
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\onnxruntime_providers_shared.lib
+C:\Users\JerryLin\Desktop\LocalAIAgentAPI\build\win-x64-v1\LocalAIAgentAPI.exe

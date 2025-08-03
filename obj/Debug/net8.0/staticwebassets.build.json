@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "QEiL3JLuTdcp71FYXiVcRfTM+TbFmxC5lRA5V3bmHPM=",
+  "Source": "LocalAIAgentAPI",
+  "BasePath": "_content/LocalAIAgentAPI",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
