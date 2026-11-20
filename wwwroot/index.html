@@ -266,6 +266,7 @@
           這個頁面只負責介面，AI 運算在你自己的電腦上執行。尚未啟動的話，請先執行：<br />
           <span class="cmd">docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai</span>
         </p>
+        <p>如果瀏覽器詢問是否允許這個網站存取本機網路或裝置，請選「允許」。啟動後這裡會自動變成已連線。</p>
       </div>
     </header>
 
@@ -358,26 +359,36 @@
       $('connPill').setAttribute('aria-expanded', String(open));
     }
 
+    let connected = false;
+    let settingsShownOnce = false;
+
     async function checkConnection() {
-      $('connText').textContent = '檢查中…';
-      $('connDot').className = 'dot';
+      if (!connected) $('connText').textContent = '檢查中…';
+      // 從 GitHub Pages 連 localhost 時，瀏覽器可能在等使用者允許「存取本機網路」，不要無限期卡住。
+      const timeout = new AbortController();
+      const timer = setTimeout(() => timeout.abort(), 4000);
       try {
-        const res = await fetch(apiBase() + '/health', { cache: 'no-store' });
+        const res = await fetch(apiBase() + '/health', { cache: 'no-store', signal: timeout.signal });
         if (!res.ok) throw new Error();
+        connected = true;
         $('connText').textContent = '本機 API 已連線';
         $('connDot').className = 'dot ok';
-        return true;
       } catch {
+        connected = false;
         $('connText').textContent = '未連線';
         $('connDot').className = 'dot bad';
-        toggleSettings(true);
-        return false;
+        if (!settingsShownOnce) { settingsShownOnce = true; toggleSettings(true); }
+      } finally {
+        clearTimeout(timer);
       }
+      return connected;
     }
 
     $('connPill').addEventListener('click', () => toggleSettings($('settings').hidden));
     apiInput.addEventListener('change', () => { store(apiBase()); checkConnection(); });
     checkConnection();
+    // 尚未連線時持續重試：啟動 API 或允許權限後，不用重新整理頁面。
+    setInterval(() => { if (!connected && !document.hidden) checkConnection(); }, 5000);
 
     // ---------- 附加圖片：按鈕、拖曳、貼上 ----------
     function attach(file) {
