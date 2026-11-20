@@ -1,0 +1,19 @@
+# Build output
+bin/
+obj/
+build/
+publish/
+artifacts/
+TestResults/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Local secrets / overrides (never commit)
+appsettings.*.local.json
+.env
+*.pfx

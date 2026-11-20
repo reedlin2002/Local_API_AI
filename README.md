@@ -1,207 +1,100 @@
 # Local_API_AI
 
+[![CI](https://github.com/reedlin2002/Local_API_AI/actions/workflows/ci.yml/badge.svg)](https://github.com/reedlin2002/Local_API_AI/actions/workflows/ci.yml)
+[![Container image](https://github.com/reedlin2002/Local_API_AI/actions/workflows/container.yml/badge.svg)](https://github.com/reedlin2002/Local_API_AI/actions/workflows/container.yml)
+[![GitHub Pages](https://github.com/reedlin2002/Local_API_AI/actions/workflows/pages.yml/badge.svg)](https://reedlin2002.github.io/Local_API_AI/)
 
+LocalAIAgentAPI 是一套在**自己電腦上執行**的 AI API：圖片分類、OCR、文字生成、圖像描述，以及會自己呼叫工具的 Agent。資料不會離開你的電腦，可以離線、在封閉網路中使用。
 
-LocalAIAgentAPI 是一套本地部署的 AI 推理平台，支援多種智慧任務，包括圖像分類、OCR 文字辨識、圖像描述生成、文字生成與多格式輸出。可脫離雲端，直接在本地執行，提供高隱私、高效能且可擴展的 AI API 解決方案，適合企業內部工具整合、嵌入式裝置、無網路環境等場景。
-![前端](LocalAIAgentAPI_frontend.png)
+**線上介面：** https://reedlin2002.github.io/Local_API_AI/
+（介面放在 GitHub Pages，AI 運算仍在你本機的 API 上執行，請先依下方步驟啟動 API。）
 
-
-----------------------------
-
-
+![前端](docs/frontend.png)
 
 ## 功能
 
-| 功能 | 說明 |
-| ------ | -----------------|
-| 圖像分類     | 上傳圖片，自動辨識主題並回傳分類標籤（使用 ONNX 模型 `resnet50-v2-7.onnx`） |
-| 圖像描述生成    | 自動為圖片生成自然語言描述（支援英文）                                 |
-| OCR 文字辨識  | 支援中英文圖片中文字辨識，整合 Tesseract OCR 引擎                    |
-| 文字生成（LLM） | 整合本地 LLM（如 Ollama），進行文字問答、創作等任務                     |
-| 多格式輸出     | 回應格式可選擇純文字或 JSON，便於串接前後端或命令列工具                      |
+| 功能 | 端點 | 說明 |
+| --- | --- | --- |
+| 圖片分類 | `POST /api/ai`（`model=imageclassifier`） | ONNX ResNet50，回傳前 5 名 ImageNet 類別與機率 |
+| 批次分類 | `POST /api/ai/batch-classify` | 一次上傳多張（`files`），壞檔會單獨標示錯誤 |
+| OCR | `POST /api/ai/ocr` | Tesseract，英文 + 繁體中文 |
+| 文字生成 | `POST /api/ai`（`model=textgeneration`） | 本機 Ollama 文字模型 |
+| 圖像描述 | `POST /api/ai/describe-image` | 有 Ollama 視覺模型（如 `llava`）時直接看圖描述；沒有時改用分類結果請文字模型描述，並在 `method` 標明 |
+| Agent | `POST /api/ai/ask` | 可附一張圖片；模型會以 tool calling 呼叫 OCR / 分類再回答。模型不支援或沒有呼叫工具時，伺服器會先跑工具再把結果交給模型，回答一定根據圖片內容 |
+| 健康檢查 | `GET /health` | |
 
+所有 `POST` 端點都接受 `?outputFormat=json`（預設）或 `?outputFormat=text`。錯誤一律回傳 [RFC 7807](https://www.rfc-editor.org/rfc/rfc7807) `application/problem+json`，不會洩漏堆疊資訊。Swagger 文件在 `/swagger`。
 
+## 快速開始
 
-----------------------------
-
-
-
-###  🛠️ 技術架構
-
-* .NET 8 為基礎 Web API 框架，使用 Minimal API 寫法
-
-* ONNX Runtime 加速推論，支援跨平台部署（已內建所有 native lib）
-
-* Tesseract OCR 提供準確的圖片文字辨識
-
-* 依賴注入 DI 架構：所有服務統一註冊與解耦
-
-* Swagger 自動化 API 文件與測試介面
-
-* 中介軟體 Middleware：提供全域錯誤攔截與記錄
-
-* 內建前端 index.html：可快速測試各項 AI 功能
-
-
-
-----------------------------
-
-
-
-### 🔒 安全性與隱私
-
-* 所有 AI 處理皆在本地進行，無資料上傳雲端
-
-* 適合需要保密性與資料自主權的企業內部使用場景
-
-* 可離線部署於封閉網路環境
-
-
-
-----------------------------
-
-
-
-### 🚀 效能與體驗
-
-* ONNX 模型 + 本地 OCR，不需等待雲端延遲
-
-* 快速響應，低記憶體需求
-
-* 可擴充其他 AI 模型，只需實作 `IAIService` 介面即可
-
-
-
-----------------------------
-
-
-
-### 💰 成本與部署
-
-| 項目      | 狀態                       |
-| ----- | -----------------|
-| ✅ 零雲端費用 | 全程本地推論、無需訂閱雲端 API        |
-| ✅ 輕量化部署 | 單機執行 `.exe` 即可啟動         |
-| ✅ 跨平台支援 | 支援 Windows / Linux / Mac |
-
-
-
-----------------------------
-
-
-
-🌱 環境影響
-
-本專案主打輕量部署，不需 GPU、無需連網、不需第三方平台授權，能大幅降低碳足跡，提升 AI 使用的永續性與成本效益。
-
-
-
-----------------------------
-
-
-
-### 📂 專案結構
+### 方式一：Docker（推薦）
 
 ```bash
-
-LocalAIAgentAPI/
-
-├─ index.html                 # 測試介面（支援模型選擇）
-
-├─ Controllers/AIController   # API 路由與邏輯
-
-├─ Services/                 # 模型服務實作（Image, OCR, LLM）
-
-├─ Middlewares/ErrorHandlingMiddleware.cs
-
-├─ Models/resnet50-v2-7.onnx
-
-├─ tessdata/                 # OCR 語言包
-
-├─ .github/workflows/dotnet-ci.yml
-
-└─ README.md
-
+docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai:latest
 ```
 
+打開 http://localhost:5136 （或 [GitHub Pages 介面](https://reedlin2002.github.io/Local_API_AI/)）。
+`127.0.0.1:` 讓 API 只對本機開放，不會暴露到區域網路。Linux 上若要連到主機的 Ollama，再加 `--add-host=host.docker.internal:host-gateway`。
 
+### 方式二：Windows 免安裝版
 
-----------------------------
+到 [Releases](https://github.com/reedlin2002/Local_API_AI/releases) 下載 `LocalAIAgentAPI-win-x64.zip`，解壓後執行 `LocalAIAgentAPI.exe`，打開 http://localhost:5136 。
 
+### 方式三：從原始碼執行
 
-
-### 🧪 快速測試
-
-
-
-1.啟動後端：
+需要 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)（Windows：`winget install Microsoft.DotNet.SDK.10`）。
 
 ```bash
-
 dotnet run
-
+dotnet test   # 執行測試
 ```
 
-2.開啟 `http://localhost:5136/index.html`，選擇模型功能，並上傳圖片或輸入文字
-
-
-
-3.若使用 API 端點，可參考 Swagger 文件：
+### 文字生成 / Agent / 圖像描述需要 Ollama
 
 ```bash
-
-http://localhost:5136/swagger
-
+ollama pull llama2    # 文字生成
+ollama pull mistral   # Agent（支援 tool calling）
+ollama pull llava     # 圖像描述（選用；沒有的話會自動改用分類結果描述）
 ```
 
+## 設定
 
+在 `appsettings.json` 調整，或用環境變數覆寫（例如 `Ollama__AgentModel=qwen2.5`）：
 
-----------------------------
+| 設定 | 預設 | 說明 |
+| --- | --- | --- |
+| `Ollama:BaseUrl` | `http://localhost:11434` | Docker 映像內預設為 `http://host.docker.internal:11434` |
+| `Ollama:TextModel` / `AgentModel` / `VisionModel` | `llama2` / `mistral` / `llava` | |
+| `Ollama:TimeoutSeconds` | `180` | 超過回傳 504 |
+| `Cors:AllowedOrigins` | GitHub Pages 網址 | **只有列在這裡的網站能從瀏覽器呼叫 API**，避免你瀏覽的任意網站偷用本機模型 |
+| `Upload:MaxBytes` | 10 MB | 上傳大小上限 |
 
+## 架構
 
+```
+Controllers/AIController.cs        路由、輸入驗證、輸出格式
+Services/ImageClassifier.cs        ONNX ResNet50（Singleton，模型只載入一次）+ SkiaSharp 前處理
+Services/OcrService.cs             Tesseract（引擎物件池，避免每次重新載入語言檔）
+Services/OllamaClient.cs           Ollama REST API（typed HttpClient，錯誤轉成清楚訊息）
+Services/ImageDescriber.cs         視覺模型描述，缺模型時退回分類 + 文字模型
+Services/AgentService.cs           tool-calling 迴圈
+Infrastructure/                    設定、例外 → ProblemDetails
+wwwroot/index.html                 前端（同時部署到 GitHub Pages）
+tests/LocalAIAgentAPI.Tests/       xUnit 整合 + 單元測試（Ollama 以假物件取代）
+```
 
-### 🧠 API 端點
+## CI/CD
 
+| Workflow | 觸發 | 內容 |
+| --- | --- | --- |
+| `ci.yml` | push / PR | 在 Linux 建置並執行全部測試（含真實 ONNX 推論與 OCR） |
+| `container.yml` | push main / tag | 建置 Docker 映像 → 啟動容器跑 `scripts/smoke-test.sh` → 推到 GHCR（`latest`、`sha-…`、版本號） |
+| `pages.yml` | `wwwroot/` 變更 | 部署前端到 GitHub Pages |
+| `release.yml` | tag `v*` | 打包 Windows 免安裝版並建立 GitHub Release |
 
+全部只用 GitHub 內建的 `GITHUB_TOKEN`，**不需要設定任何 secret**。發版：`git tag v1.2.0 && git push origin v1.2.0`。
 
-| 功能       | 路徑                       | 方法   | 備註                    |
-| -------- | ------------------------ | ---- | --------------------- |
-| Image 分類 | `/api/ai`                | POST | model=imageclassifier |
-| OCR      | `/api/ai/ocr`            | POST | 支援中英文圖片               |
-| 圖像描述生成   | `/api/ai/describe-image` | POST | 英文自然語言描述              |
-| LLM 問答   | `/api/ai/ask`            | POST | prompt 與 output 格式    |
+## 授權與模型來源
 
-
-
-----------------------------
-
-
-
-### 🧰 CI/CD
-
-內建 GitHub Actions：
-
-* dotnet build
-
-* dotnet test（如需擴充）
-
-* 自動化部署可加上 publish 參數
-
-
-
-----------------------------
-
-
-
-### 🔧 延伸與自定義
-
-新增 AI 模型？→ 實作一個 `IAIService`，加到 `AIServiceFactory`
-
-
-
-想支援其他格式？→ 修改前端 `index.html` 與 Controller 回傳格式即可
-
-
-
-支援多語言 OCR？→ 加入 `.traineddata` 到 `/tessdata/`
-
+- 圖片分類模型：[ONNX Model Zoo – ResNet50 v2](https://github.com/onnx/models)
+- OCR 語言檔：[tesseract-ocr/tessdata](https://github.com/tesseract-ocr/tessdata)
