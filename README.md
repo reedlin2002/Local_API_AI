@@ -38,6 +38,7 @@ Local_API_AI 是一套在自己電腦上執行的 AI 推理服務，把圖片分
 
 ## 核心價值
 
+- **不用先選功能**：只有一個輸入框。丟圖片就自動分析、打字就回答、圖片加問題就交給 Agent，系統自己決定該用哪些模型。
 - **資料不離開本機**：影像與文字只在本機處理，適合內部文件、敏感圖片與離線環境。
 - **一組 API 整合多種能力**：分類、OCR、文字生成、圖像描述與 Agent 共用相同的上傳、錯誤與輸出格式。
 - **Agent 一定看過圖才回答**：模型會用 tool calling 呼叫 OCR 與分類；小模型沒有呼叫工具時，伺服器會先跑工具，再把結果交給模型，避免憑空作答。
@@ -49,6 +50,8 @@ Local_API_AI 是一套在自己電腦上執行的 AI 推理服務，把圖片分
 
 | 功能 | 說明 |
 | --- | --- |
+| 單一輸入、自動分流 | 文字、圖片或兩者一起送出，前端自動決定要分析、回答還是交給 Agent；結果下方提供一鍵追問 |
+| 圖片分析 | 分類與 OCR 平行執行、一次回傳，不需要 Ollama；圖中有文字時優先顯示文字 |
 | 圖片分類 | ResNet50 辨識圖片主體，回傳前 5 名 ImageNet 類別與機率 |
 | 批次分類 | 一次上傳多張圖片，無法解析的檔案會單獨標示錯誤 |
 | OCR 文字辨識 | 辨識圖片中的英文與繁體中文 |
@@ -89,7 +92,9 @@ flowchart TB
 
 ### 前端
 
-`wwwroot/index.html` 是純靜態頁面，同一份檔案有兩種用法：由 API 本身提供（`http://localhost:5136`），或部署在 GitHub Pages 上，再連回使用者本機的 API。頁面會自動偵測 API 是否在線，並可自訂 API 位址。
+`wwwroot/index.html` 是純靜態頁面，介面只有一個輸入框：可以打字、按按鈕附加圖片、直接拖曳或貼上（Ctrl + V）圖片。使用者不需要知道背後有哪些模型，頁面會依輸入內容自動呼叫對應的 API（見下方[前端自動分流](#前端自動分流)）。
+
+同一份檔案有兩種用法：由 API 本身提供（`http://localhost:5136`），或部署在 GitHub Pages 上，再連回使用者本機的 API。頁面會自動偵測 API 是否在線，並可自訂 API 位址。
 
 ### 後端與 AI 推理
 
@@ -107,6 +112,21 @@ ASP.NET Core（.NET 10）提供 REST API，負責：
 ---
 
 ## 流程架構圖
+
+### 前端自動分流
+
+```mermaid
+flowchart LR
+    A["使用者輸入<br/>文字 / 圖片 / 兩者"] --> B{"有文字？"}
+    B -->|"沒有，只有圖片"| C["/api/ai/analyze<br/>分類 + OCR"]
+    B -->|有| D["/api/ai/ask<br/>Agent"]
+    C --> E["顯示結果<br/>＋ 一鍵追問"]
+    E -->|"描述這張圖片"| F["/api/ai/describe-image"]
+    E -->|"這段文字在說什麼？"| D
+    D -->|"Ollama 未啟動且有圖片"| C
+```
+
+附加的圖片會保留在輸入框，接著追問同一張圖片時不用重新上傳；按 × 即可移除。
 
 ### Agent 決策流程
 
@@ -181,11 +201,12 @@ flowchart LR
 | 方法 | 路徑 | 用途 |
 | --- | --- | --- |
 | `GET` | `/health` | 服務健康檢查 |
+| `POST` | `/api/ai/analyze` | 圖片分析：分類 + OCR 一次回傳（不需要 Ollama） |
+| `POST` | `/api/ai/ask` | Agent 問答（可附圖片） |
+| `POST` | `/api/ai/describe-image` | 圖像描述 |
 | `POST` | `/api/ai` | 通用入口：`model` = `imageclassifier`、`textgeneration`、`agent` |
 | `POST` | `/api/ai/batch-classify` | 批次圖片分類 |
 | `POST` | `/api/ai/ocr` | OCR 文字辨識 |
-| `POST` | `/api/ai/describe-image` | 圖像描述 |
-| `POST` | `/api/ai/ask` | Agent 問答（可附圖片） |
 
 所有 `POST` 端點接受 `multipart/form-data`，並以 `?outputFormat=json|text` 選擇輸出格式。完整參數與回應格式請啟動服務後查看 `/swagger`。
 
@@ -240,6 +261,7 @@ docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai:latest
 - **分類只涵蓋 ImageNet 1000 類**：屬於通用物件辨識，相近類別容易混淆（例如 tiger cat 與 tabby cat），也無法辨識類別以外的內容。
 - **中文 OCR 準確度有限**：Tesseract 對印刷體表現較好，手寫、低解析度或複雜背景容易出錯（例如「圖片」可能被辨識成「圖傅」）。
 - **小型 LLM 的工具呼叫不穩定**：實測 `mistral` 7B 約六次中只有一次主動呼叫工具，因此由伺服器補跑工具來確保回答有依據。
+- **預設模型的中文能力有限**：`mistral` 7B 的中文回答偶有錯字，也可能誤解 ImageNet 標籤（例如把家貓花紋的 tiger cat 當成老虎）；中文場景建議改用支援 tool calling 的 `qwen2.5:7b`（設定 `Ollama:AgentModel`）。
 - **未安裝視覺模型時的圖像描述**：只根據分類標籤推測，不是真的「看到」圖片，回應中會以 `method: label-fallback` 標明。
 - **沒有身分驗證**：設計為本機使用，請勿直接對外開放；Docker 指令預設只綁定 `127.0.0.1`。
 - **瀏覽器限制**：從 GitHub Pages 連回本機 API 時，Chrome / Edge 會詢問是否允許存取本機網路；Safari 會阻擋 https 頁面連到 `http://localhost`，建議改用 API 內建頁面。

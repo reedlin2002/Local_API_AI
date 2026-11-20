@@ -3,493 +3,322 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI 多模型測試頁 - 水墨雅韻</title>
+  <title>本機 AI 助手</title>
+  <meta name="description" content="丟一張圖片或直接提問，所有 AI 運算都在你自己的電腦上執行。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --ink: #2c3e50;
+      --ink-strong: #1f2d3a;
+      --ink-soft: #6c757d;
+      --paper: rgba(255, 255, 255, 0.95);
+      --paper-muted: rgba(248, 249, 250, 0.9);
+      --line: rgba(0, 0, 0, 0.1);
+      --line-strong: rgba(0, 0, 0, 0.25);
+      --ok: #2e7d32;
+      --bad: #c62828;
+      --warn-bg: rgba(255, 193, 7, 0.12);
+      --mono: "Source Code Pro", "Consolas", "Courier New", monospace;
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Noto Serif TC', serif;
+      color: var(--ink);
       background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 2rem;
-      position: relative;
+      padding: 2rem 1rem;
       overflow-x: hidden;
     }
 
-    /* 水墨背景效果 */
+    /* 水墨背景 */
     body::before {
       content: '';
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: 
+      inset: 0;
+      background:
         radial-gradient(ellipse at 20% 20%, rgba(0, 0, 0, 0.05) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 30%, rgba(0, 0, 0, 0.08) 0%, transparent 60%),
-        radial-gradient(ellipse at 40% 80%, rgba(0, 0, 0, 0.06) 0%, transparent 40%),
-        radial-gradient(ellipse at 70% 70%, rgba(0, 0, 0, 0.04) 0%, transparent 70%);
+        radial-gradient(ellipse at 40% 80%, rgba(0, 0, 0, 0.06) 0%, transparent 40%);
       pointer-events: none;
       z-index: -1;
     }
 
-    /* 飄動的水墨點 */
-    .ink-drops {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: -1;
-    }
-
+    .ink-drops { position: fixed; inset: 0; pointer-events: none; z-index: -1; }
     .ink-drop {
-      position: absolute;
-      width: 3px;
-      height: 3px;
+      position: absolute; width: 3px; height: 3px; border-radius: 50%;
       background: rgba(0, 0, 0, 0.1);
-      border-radius: 50%;
       animation: inkFloat 8s ease-in-out infinite;
     }
-
     @keyframes inkFloat {
-      0%, 100% { 
-        transform: translateY(0px) scale(1);
-        opacity: 0.1;
-      }
-      50% { 
-        transform: translateY(-30px) scale(1.5);
-        opacity: 0.3;
-      }
+      0%, 100% { transform: translateY(0) scale(1); opacity: 0.1; }
+      50% { transform: translateY(-30px) scale(1.5); opacity: 0.3; }
     }
 
     main {
-      background: rgba(255, 255, 255, 0.95);
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 0;
-      padding: 3rem;
-      max-width: 650px;
-      width: 100%;
-      box-shadow: 
-        0 20px 40px rgba(0, 0, 0, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 2px solid var(--line);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      min-height: calc(100vh - 4rem);
+    }
+
+    /* ---- 標頭 ---- */
+    header {
+      padding: 2rem 2rem 1.25rem;
+      border-bottom: 1px solid var(--line);
       position: relative;
-      overflow: hidden;
     }
-
-    /* 主容器的水墨邊框效果 */
-    main::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      background: linear-gradient(45deg, 
-        rgba(0, 0, 0, 0.2) 0%, 
-        rgba(0, 0, 0, 0.1) 25%, 
-        rgba(0, 0, 0, 0.05) 50%, 
-        rgba(0, 0, 0, 0.1) 75%, 
-        rgba(0, 0, 0, 0.2) 100%);
-      z-index: -1;
-      filter: blur(1px);
-    }
-
     h1 {
-      text-align: center;
-      margin-bottom: 1rem;
-      font-size: 2.8rem;
+      font-size: 2.2rem;
       font-weight: 900;
-      color: #2c3e50;
       letter-spacing: 2px;
-      position: relative;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+      color: var(--ink);
+    }
+    .subtitle { color: var(--ink-soft); margin-top: 0.4rem; letter-spacing: 0.5px; }
+
+    .pill {
+      position: absolute; top: 2rem; right: 2rem;
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      font: inherit; font-size: 0.85rem; color: var(--ink);
+      background: var(--paper-muted); border: 1px solid var(--line);
+      padding: 0.35rem 0.8rem; cursor: pointer;
+    }
+    .pill:hover { border-color: var(--line-strong); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-soft); }
+    .dot.ok { background: var(--ok); }
+    .dot.bad { background: var(--bad); }
+
+    .settings {
+      margin-top: 1rem; padding: 1rem;
+      background: var(--paper-muted); border: 1px solid var(--line);
+      font-size: 0.9rem; line-height: 1.7;
+    }
+    .settings label { font-weight: 700; display: block; margin-bottom: 0.4rem; }
+    .settings input {
+      width: 100%; font: inherit; padding: 0.6rem 0.8rem;
+      border: 1px solid var(--line-strong); background: #fff; color: var(--ink);
+    }
+    .settings p { margin-top: 0.6rem; color: var(--ink-soft); }
+    code, .cmd {
+      font-family: var(--mono); font-size: 0.82em;
+      background: rgba(0, 0, 0, 0.05); padding: 0.1em 0.35em;
+      overflow-wrap: anywhere;
     }
 
-    /* 標題下方的水墨筆觸 */
-    h1::after {
-      content: '';
-      position: absolute;
-      bottom: -10px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100px;
-      height: 3px;
-      background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.8), transparent);
-      border-radius: 2px;
-    }
+    /* ---- 對話區 ---- */
+    #feed { flex: 1; padding: 1.5rem 2rem; display: flex; flex-direction: column; gap: 1.5rem; }
 
-    .subtitle {
-      text-align: center;
-      margin-bottom: 2.5rem;
-      color: #6c757d;
-      font-size: 1.2rem;
-      font-weight: 400;
-      letter-spacing: 1px;
-      position: relative;
+    .welcome h2 { font-size: 1.1rem; margin-bottom: 1rem; }
+    .ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+    .way {
+      border: 1px solid var(--line); background: var(--paper-muted);
+      padding: 1rem; line-height: 1.6;
     }
+    .way svg { width: 22px; height: 22px; stroke: var(--ink); margin-bottom: 0.4rem; }
+    .way strong { display: block; }
+    .way span { color: var(--ink-soft); font-size: 0.88rem; }
+    .examples { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
-    .subtitle::before,
-    .subtitle::after {
-      content: '◆';
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      color: rgba(0, 0, 0, 0.3);
-      font-size: 0.8rem;
+    .turn { display: flex; flex-direction: column; gap: 0.75rem; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+    .user {
+      align-self: flex-end; max-width: 85%;
+      display: flex; gap: 0.75rem; align-items: flex-end;
+      background: var(--ink); color: #fff; padding: 0.7rem 1rem;
     }
+    .user img { width: 72px; height: 72px; object-fit: cover; border: 1px solid rgba(255,255,255,0.4); }
+    .user p { white-space: pre-wrap; line-height: 1.6; }
 
-    .subtitle::before {
-      left: -30px;
-    }
-
-    .subtitle::after {
-      right: -30px;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.8rem;
-      position: relative;
-    }
-
-    label {
-      color: #2c3e50;
-      font-weight: 700;
-      font-size: 1rem;
-      letter-spacing: 0.5px;
-      position: relative;
-      padding-left: 1rem;
-    }
-
-    label::before {
-      content: '●';
-      position: absolute;
-      left: 0;
-      color: rgba(0, 0, 0, 0.6);
-      font-size: 0.8rem;
-    }
-
-    select, input[type="file"], input[type="text"] {
-      padding: 1.2rem 1.5rem;
-      font-size: 1rem;
-      background: rgba(255, 255, 255, 0.8);
-      border: 2px solid rgba(0, 0, 0, 0.1);
-      border-radius: 0;
-      color: #2c3e50;
-      font-family: 'Noto Serif TC', serif;
-      transition: all 0.3s ease;
-      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    select:focus, input:focus {
-      outline: none;
-      border-color: rgba(0, 0, 0, 0.4);
-      background: rgba(255, 255, 255, 0.95);
-      box-shadow: 
-        inset 0 2px 4px rgba(0, 0, 0, 0.1),
-        0 0 0 3px rgba(0, 0, 0, 0.05);
-    }
-
-    select option {
-      background: #fff;
-      color: #2c3e50;
-      padding: 0.5rem;
-    }
-
-    input::placeholder {
-      color: rgba(44, 62, 80, 0.5);
-      font-style: italic;
-    }
-
-    button {
-      padding: 1.5rem 2rem;
-      font-size: 1.2rem;
-      font-weight: 700;
-      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-      color: white;
-      border: none;
-      border-radius: 0;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 1rem;
-      font-family: 'Noto Serif TC', serif;
-      letter-spacing: 1px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    button::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: left 0.6s ease;
-    }
-
-    button:hover::before {
-      left: 100%;
-    }
-
-    button:hover {
-      background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-      transform: translateY(-2px);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    #result {
-      margin-top: 2rem;
-      padding: 2rem;
-      background: rgba(248, 249, 250, 0.8);
-      border: 1px solid rgba(0, 0, 0, 0.1);
+    .ai {
+      align-self: stretch;
+      background: var(--paper-muted); border: 1px solid var(--line);
       border-left: 4px solid rgba(0, 0, 0, 0.6);
-      white-space: pre-wrap;
-      max-height: 400px;
-      overflow-y: auto;
-      font-family: "Source Code Pro", "Courier New", monospace;
-      color: #2c3e50;
-      font-size: 0.9rem;
-      line-height: 1.8;
-      animation: fadeIn 0.6s ease-out;
-      position: relative;
+      padding: 1.1rem 1.25rem; line-height: 1.8;
+      display: flex; flex-direction: column; gap: 1rem;
+    }
+    .ai h3 { font-size: 0.85rem; color: var(--ink-soft); font-weight: 700; letter-spacing: 1px; margin-bottom: 0.3rem; }
+    .answer { white-space: pre-wrap; }
+    .headline { font-size: 1.35rem; font-weight: 700; }
+    .headline small { font-size: 0.9rem; color: var(--ink-soft); font-weight: 400; margin-left: 0.4rem; }
+    pre.ocr {
+      white-space: pre-wrap; font-family: var(--mono); font-size: 0.92rem;
+      background: #fff; border: 1px solid var(--line); padding: 0.75rem;
     }
 
-    #result::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 4px;
-      height: 100%;
-      background: linear-gradient(180deg, 
-        rgba(0, 0, 0, 0.8) 0%, 
-        rgba(0, 0, 0, 0.4) 50%, 
-        rgba(0, 0, 0, 0.8) 100%);
-    }
+    .bars { display: grid; grid-template-columns: minmax(7rem, 14rem) 1fr 3.5rem; gap: 0.35rem 0.75rem; align-items: center; font-size: 0.88rem; }
+    .bars .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bars .track { height: 8px; background: rgba(0, 0, 0, 0.06); }
+    .bars .fill { height: 100%; background: rgba(44, 62, 80, 0.85); }
+    .bars .pct { text-align: right; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
-    @keyframes fadeIn {
-      from { 
-        opacity: 0; 
-        transform: translateY(30px); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateY(0); 
-      }
-    }
+    .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; font-size: 0.8rem; color: var(--ink-soft); }
+    .badge { border: 1px solid var(--line-strong); padding: 0.05rem 0.5rem; color: var(--ink); background: #fff; }
 
-    .input-hidden {
-      display: none !important;
-    }
+    .note { font-size: 0.85rem; color: var(--ink-soft); background: var(--warn-bg); padding: 0.5rem 0.75rem; }
+    .error { color: var(--bad); }
 
-    .processing {
-      position: relative;
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip {
+      font: inherit; font-size: 0.85rem; color: var(--ink);
+      background: #fff; border: 1px solid var(--line-strong);
+      padding: 0.3rem 0.8rem; cursor: pointer;
     }
+    .chip:hover { background: var(--ink); color: #fff; }
 
-    .processing::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 20px;
-      height: 20px;
-      margin: -10px 0 0 -10px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: white;
+    details.raw summary { cursor: pointer; font-size: 0.8rem; color: var(--ink-soft); }
+    details.raw pre { margin-top: 0.5rem; font-family: var(--mono); font-size: 0.78rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; }
+
+    .pending { color: var(--ink-soft); display: flex; align-items: center; gap: 0.6rem; }
+    .spinner {
+      width: 16px; height: 16px; border-radius: 50%;
+      border: 2px solid rgba(0, 0, 0, 0.15); border-top-color: var(--ink);
       animation: spin 1s linear infinite;
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    /* ---- 輸入區 ---- */
+    #composer {
+      position: sticky; bottom: 0;
+      background: #fff; border-top: 1px solid var(--line);
+      box-shadow: 0 -8px 16px rgba(255, 255, 255, 0.9);
+      padding: 1rem 2rem 1.25rem;
     }
-
-    /* 響應式設計 */
-    @media (max-width: 768px) {
-      main {
-        padding: 2rem;
-        margin: 1rem;
-      }
-      
-      h1 {
-        font-size: 2.2rem;
-      }
-      
-      .subtitle {
-        font-size: 1rem;
-      }
-
-      .subtitle::before,
-      .subtitle::after {
-        display: none;
-      }
+    .attachment {
+      display: inline-flex; align-items: center; gap: 0.6rem;
+      border: 1px solid var(--line); background: #f8f9fa;
+      padding: 0.4rem 0.5rem 0.4rem 0.4rem; margin-bottom: 0.6rem; font-size: 0.85rem; color: var(--ink-soft);
     }
-
-    /* 滾動條水墨風格 */
-    #result::-webkit-scrollbar {
-      width: 8px;
+    .attachment img { width: 44px; height: 44px; object-fit: cover; }
+    .icon-btn {
+      font: inherit; background: none; border: 1px solid transparent; cursor: pointer;
+      color: var(--ink); display: inline-flex; align-items: center; justify-content: center;
     }
+    .icon-btn:hover { border-color: var(--line-strong); }
+    .icon-btn svg { width: 22px; height: 22px; stroke: currentColor; }
 
-    #result::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
+    .row { display: flex; gap: 0.6rem; align-items: flex-end; }
+    .row .icon-btn { width: 48px; height: 48px; border: 2px solid var(--line); background: #fff; flex-shrink: 0; }
+    textarea {
+      flex: 1; resize: none; font: inherit; font-size: 1rem; line-height: 1.6;
+      color: var(--ink); background: #fff;
+      border: 2px solid var(--line); padding: 0.7rem 0.9rem; min-height: 48px; max-height: 180px;
     }
-
-    #result::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 0;
+    textarea:focus, .settings input:focus { outline: none; border-color: var(--line-strong); box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05); }
+    .send {
+      height: 48px; padding: 0 1.4rem; flex-shrink: 0;
+      font: inherit; font-weight: 700; letter-spacing: 1px; color: #fff;
+      background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+      border: none; cursor: pointer;
     }
+    .send:disabled { opacity: 0.5; cursor: progress; }
+    .hint { margin-top: 0.5rem; font-size: 0.78rem; color: var(--ink-soft); }
 
-    #result::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
+    /* 拖曳覆蓋層 */
+    .drop {
+      position: fixed; inset: 0; z-index: 10;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(248, 249, 250, 0.85); border: 3px dashed var(--ink);
+      font-size: 1.4rem; font-weight: 700; color: var(--ink);
     }
+    body.dragging .drop { display: flex; }
 
-    /* 水墨暈染效果 */
-    .ink-wash {
-      position: relative;
-    }
+    [hidden] { display: none !important; }
+    ::selection { background: rgba(0, 0, 0, 0.1); color: var(--ink); }
 
-    .ink-wash::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: 
-        radial-gradient(circle at 30% 30%, rgba(0, 0, 0, 0.02) 0%, transparent 50%),
-        radial-gradient(circle at 70% 70%, rgba(0, 0, 0, 0.02) 0%, transparent 50%);
-      pointer-events: none;
-      border-radius: inherit;
-    }
-
-    /* API 連線設定 */
-    .api-settings {
-      margin-bottom: 2rem;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      padding: 0.8rem 1rem;
-      background: rgba(248, 249, 250, 0.8);
-    }
-
-    .api-settings summary {
-      cursor: pointer;
-      color: #2c3e50;
-      font-weight: 700;
-    }
-
-    .api-settings .form-group {
-      margin-top: 1rem;
-    }
-
-    .api-settings small {
-      color: #6c757d;
-      line-height: 1.6;
-    }
-
-    .api-settings code {
-      font-size: 0.85em;
-      background: rgba(0, 0, 0, 0.05);
-      padding: 0 0.3em;
-    }
-
-    .status-ok { color: #2e7d32; }
-    .status-bad { color: #c62828; }
-
-    /* 文字選擇效果 */
-    ::selection {
-      background: rgba(0, 0, 0, 0.1);
-      color: #2c3e50;
+    @media (max-width: 640px) {
+      body { padding: 0; }
+      main { min-height: 100vh; border: none; }
+      header, #feed, #composer { padding-left: 1rem; padding-right: 1rem; }
+      header { padding-top: 1.25rem; }
+      h1 { font-size: 1.7rem; padding-right: 6.5rem; }
+      .pill { top: 1.25rem; right: 1rem; }
+      .ways { grid-template-columns: 1fr; }
+      .bars { grid-template-columns: minmax(5rem, 9rem) 1fr 3rem; }
+      .send { padding: 0 1rem; }
+      .user { max-width: 100%; }
+      .hint { display: none; }
     }
   </style>
 </head>
 <body>
   <div class="ink-drops" id="inkDrops"></div>
-  
-  <main class="ink-wash">
-    <h1>AI 多模型測試</h1>
-    <div class="subtitle">探索智慧之源，揮灑數位丹青</div>
+  <div class="drop" aria-hidden="true">放開以附加圖片</div>
 
-    <details class="api-settings" id="apiSettings">
-      <summary>API 連線：<span id="apiStatus">檢查中…</span></summary>
-      <div class="form-group">
-        <label for="apiBaseInput">API 位址</label>
-        <input type="text" id="apiBaseInput" placeholder="http://localhost:5136" spellcheck="false" />
-        <small>
-          所有 AI 運算都在你自己的電腦上執行，這個頁面只負責介面。請先在本機啟動 API：<br />
-          <code>docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai</code><br />
-          或在專案資料夾執行 <code>dotnet run</code>。
-        </small>
-      </div>
-    </details>
-
-    <form id="uploadForm">
-      <div class="form-group">
-        <label for="actionSelect">選擇 AI 模型</label>
-        <select id="actionSelect" required>
-          <option value="imageclassifier">圖片分類 · 識別萬物</option>
-          <option value="textgeneration">文字生成 · 筆墨生花</option>
-          <option value="describe">影像描述 · 繪聲繪影</option>
-          <option value="ocr">OCR文字辨識 · 洞察秋毫</option>
-          <option value="agent">智慧問答 Agent · 博古通今</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label id="fileLabel" for="fileInput">上傳圖片檔案</label>
-        <input type="file" id="fileInput" accept="image/*" />
-      </div>
-
-      <div class="form-group">
-        <label id="promptLabel" for="promptInput">輸入提示文字</label>
-        <input type="text" id="promptInput" placeholder="請在此處輸入您的提示文字..." />
-      </div>
-
-      <div class="form-group">
-        <label id="outputFormatLabel" for="outputFormatSelect">輸出格式</label>
-        <select id="outputFormatSelect">
-          <option value="text">純文字格式</option>
-          <option value="json">JSON 結構化格式</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <small id="hint" style="color:#6c757d;line-height:1.6"></small>
-      </div>
-
-      <button type="submit">
-        開始處理
+  <main>
+    <header>
+      <h1>本機 AI 助手</h1>
+      <p class="subtitle">丟一張圖片，或直接問我。所有運算都在你的電腦上。</p>
+      <button type="button" class="pill" id="connPill" aria-expanded="false" aria-controls="settings">
+        <span class="dot" id="connDot"></span><span id="connText">檢查中…</span>
       </button>
-    </form>
+      <div class="settings" id="settings" hidden>
+        <label for="apiBaseInput">本機 API 位址</label>
+        <input type="text" id="apiBaseInput" spellcheck="false" placeholder="http://localhost:5136" />
+        <p>
+          這個頁面只負責介面，AI 運算在你自己的電腦上執行。尚未啟動的話，請先執行：<br />
+          <span class="cmd">docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai</span>
+        </p>
+      </div>
+    </header>
 
-    <div id="result">墨硯已備，靜待您的指令...</div>
+    <section id="feed" aria-live="polite">
+      <div class="welcome" id="welcome">
+        <h2>可以這樣用</h2>
+        <div class="ways">
+          <div class="way">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>
+            <strong>只丟一張圖片</strong>
+            <span>自動辨識圖片內容，並讀出圖中的文字。</span>
+          </div>
+          <div class="way">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>
+            <strong>直接提問</strong>
+            <span>由本機的 LLM 回答，不經過任何雲端。</span>
+          </div>
+          <div class="way">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>
+            <strong>圖片＋問題</strong>
+            <span>Agent 自己決定要看圖、讀字，再回答你。</span>
+          </div>
+        </div>
+        <div class="examples" id="examples">
+          <button type="button" class="chip">用一句話介紹台北 101</button>
+          <button type="button" class="chip">幫我想三個咖啡廳的店名</button>
+        </div>
+      </div>
+    </section>
+
+    <form id="composer" autocomplete="off">
+      <div class="attachment" id="attachment" hidden>
+        <img id="attachmentImg" alt="已附加的圖片" />
+        <span>已附加圖片，會跟著問題一起送出</span>
+        <button type="button" class="icon-btn" id="removeImage" aria-label="移除圖片" title="移除圖片">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="row">
+        <button type="button" class="icon-btn" id="attachBtn" aria-label="附加圖片" title="附加圖片">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>
+        </button>
+        <textarea id="prompt" rows="1" aria-label="輸入問題" placeholder="問我任何事，或拖曳、貼上一張圖片…"></textarea>
+        <button type="submit" class="send" id="sendBtn">送出</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" hidden />
+      <p class="hint">Enter 送出 · Shift + Enter 換行 · 可以直接貼上（Ctrl + V）或拖曳圖片</p>
+    </form>
   </main>
 
   <script>
-    // 創建水墨點效果
-    function createInkDrops() {
+    // ---------- 背景水墨點 ----------
+    (function createInkDrops() {
       const container = document.getElementById('inkDrops');
       for (let i = 0; i < 30; i++) {
         const drop = document.createElement('div');
@@ -498,155 +327,311 @@
         drop.style.top = Math.random() * 100 + '%';
         drop.style.animationDelay = Math.random() * 8 + 's';
         drop.style.animationDuration = (Math.random() * 4 + 8) + 's';
-        drop.style.opacity = Math.random() * 0.3 + 0.1;
         container.appendChild(drop);
       }
-    }
+    })();
 
-    createInkDrops();
+    const $ = id => document.getElementById(id);
+    const feed = $('feed');
+    const promptEl = $('prompt');
+    const sendBtn = $('sendBtn');
+    const state = { image: null, imageUrl: null, busy: false };
 
-    const actionSelect = document.getElementById('actionSelect');
-    const fileInput = document.getElementById('fileInput');
-    const fileLabel = document.getElementById('fileLabel');
-    const promptInput = document.getElementById('promptInput');
-    const outputFormatSelect = document.getElementById('outputFormatSelect');
-    const resultDiv = document.getElementById('result');
-    const hint = document.getElementById('hint');
-    const apiBaseInput = document.getElementById('apiBaseInput');
-    const apiStatus = document.getElementById('apiStatus');
-    const apiSettings = document.getElementById('apiSettings');
+    const TOOL_NAMES = { classify_image: '圖片分類', read_text_in_image: '文字辨識 OCR' };
 
-    // 每個功能需要的欄位與對應的 API
-    const ACTIONS = {
-      imageclassifier: { path: '/api/ai', file: 'required', prompt: false, fields: { model: 'imageclassifier' },
-        hint: '使用本機 ResNet50 模型辨識圖片主體，回傳前 5 名分類與機率。' },
-      textgeneration: { path: '/api/ai', file: false, prompt: true, fields: { model: 'textgeneration' },
-        hint: '交給本機 Ollama 文字模型回答（需要先執行 ollama serve）。' },
-      describe: { path: '/api/ai/describe-image', file: 'required', prompt: false, fields: {},
-        hint: '有安裝視覺模型（ollama pull llava）時直接看圖描述，沒有的話改用分類結果請文字模型描述。' },
-      ocr: { path: '/api/ai/ocr', file: 'required', prompt: false, fields: {},
-        hint: '用 Tesseract 辨識圖片中的英文與繁體中文。' },
-      agent: { path: '/api/ai/ask', file: 'optional', prompt: true, fields: {},
-        hint: '可以附一張圖片：Agent 會自己決定要不要呼叫 OCR 或圖片分類工具，再回答你的問題。' },
-    };
-
-    // ---- API 位址：同源 > ?api= > 上次設定 > 預設 localhost ----
+    // ---------- API 位址與連線狀態 ----------
     const STORAGE_KEY = 'localai.apiBase';
+    const DEFAULT_API = 'http://localhost:5136';
     const servedByApi = location.protocol.startsWith('http') && !location.hostname.endsWith('github.io');
 
-    function readStoredBase() {
-      try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
-    }
+    function readStored() { try { return localStorage.getItem(STORAGE_KEY); } catch { return null; } }
+    function store(value) { try { localStorage.setItem(STORAGE_KEY, value); } catch { /* 無痕模式等，忽略 */ } }
 
-    function storeBase(value) {
-      try { localStorage.setItem(STORAGE_KEY, value); } catch { /* 無痕模式等情況，忽略 */ }
-    }
+    const apiInput = $('apiBaseInput');
+    apiInput.value = new URLSearchParams(location.search).get('api')
+      || (servedByApi ? location.origin : readStored() || DEFAULT_API);
 
-    function initialApiBase() {
-      const fromQuery = new URLSearchParams(location.search).get('api');
-      if (fromQuery) return fromQuery;
-      if (servedByApi) return location.origin;
-      return readStoredBase() || 'http://localhost:5136';
-    }
+    function apiBase() { return (apiInput.value.trim() || DEFAULT_API).replace(/\/+$/, ''); }
 
-    function apiBase() {
-      return (apiBaseInput.value.trim() || 'http://localhost:5136').replace(/\/+$/, '');
+    function toggleSettings(open) {
+      $('settings').hidden = !open;
+      $('connPill').setAttribute('aria-expanded', String(open));
     }
 
     async function checkConnection() {
-      apiStatus.textContent = '檢查中…';
-      apiStatus.className = '';
+      $('connText').textContent = '檢查中…';
+      $('connDot').className = 'dot';
       try {
         const res = await fetch(apiBase() + '/health', { cache: 'no-store' });
-        if (!res.ok) throw new Error(res.status);
-        apiStatus.textContent = '已連線 ✓';
-        apiStatus.className = 'status-ok';
+        if (!res.ok) throw new Error();
+        $('connText').textContent = '本機 API 已連線';
+        $('connDot').className = 'dot ok';
         return true;
       } catch {
-        apiStatus.textContent = '未連線 ✗（展開查看如何啟動）';
-        apiStatus.className = 'status-bad';
-        apiSettings.open = true;
+        $('connText').textContent = '未連線';
+        $('connDot').className = 'dot bad';
+        toggleSettings(true);
         return false;
       }
     }
 
-    apiBaseInput.value = initialApiBase();
-    apiBaseInput.addEventListener('change', () => {
-      storeBase(apiBase());
-      checkConnection();
-    });
+    $('connPill').addEventListener('click', () => toggleSettings($('settings').hidden));
+    apiInput.addEventListener('change', () => { store(apiBase()); checkConnection(); });
     checkConnection();
 
-    function toggleInputs() {
-      const action = ACTIONS[actionSelect.value];
-
-      fileInput.parentElement.classList.toggle('input-hidden', !action.file);
-      promptInput.parentElement.classList.toggle('input-hidden', !action.prompt);
-      fileLabel.textContent = action.file === 'optional' ? '上傳圖片檔案（選填）' : '上傳圖片檔案';
-      hint.textContent = action.hint;
-
-      resultDiv.textContent = '墨硯已備，靜待您的指令...';
-    }
-
-    actionSelect.addEventListener('change', toggleInputs);
-    toggleInputs();
-
-    async function readError(res) {
-      try {
-        const problem = await res.json();
-        return problem.detail || problem.title || `HTTP ${res.status}`;
-      } catch {
-        return `HTTP ${res.status}`;
+    // ---------- 附加圖片：按鈕、拖曳、貼上 ----------
+    function attach(file) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        addTurn({ text: file.name }).ai(card => card.append(el('p', 'error', '只能附加圖片檔案（JPG、PNG、WebP、BMP、GIF）。')));
+        return;
       }
+      state.image = file;
+      state.imageUrl = URL.createObjectURL(file);
+      $('attachmentImg').src = state.imageUrl;
+      $('attachment').hidden = false;
+      promptEl.focus();
     }
 
-    function formatJson(json) {
-      return JSON.stringify(json, null, 2);
+    function detach() {
+      state.image = null;
+      state.imageUrl = null;
+      $('attachment').hidden = true;
+      $('fileInput').value = '';
     }
 
-    document.getElementById('uploadForm').addEventListener('submit', async e => {
-      e.preventDefault();
+    $('attachBtn').addEventListener('click', () => $('fileInput').click());
+    $('fileInput').addEventListener('change', e => attach(e.target.files[0]));
+    $('removeImage').addEventListener('click', detach);
 
-      const button = e.target.querySelector('button');
-      button.classList.add('processing');
-      button.disabled = true;
-      button.textContent = '正在處理中...';
-
-      resultDiv.textContent = '筆墨正濃，AI 正在為您潛心創作...';
-
-      const action = ACTIONS[actionSelect.value];
-      const file = fileInput.files[0];
-      const prompt = promptInput.value.trim();
-      const outputFormat = outputFormatSelect.value;
-
-      try {
-        if (action.file === 'required' && !file) throw new Error('請選擇圖片檔案');
-        if (action.prompt && !prompt) throw new Error('請輸入提示文字');
-
-        const formData = new FormData();
-        for (const [key, value] of Object.entries(action.fields)) formData.append(key, value);
-        if (action.prompt) formData.append('prompt', prompt);
-        if (action.file && file) formData.append('file', file);
-
-        let res;
-        try {
-          res = await fetch(`${apiBase()}${action.path}?outputFormat=${outputFormat}`, { method: 'POST', body: formData });
-        } catch {
-          checkConnection();
-          throw new Error(`連不到 API（${apiBase()}）。請確認本機 API 已啟動。`);
-        }
-
-        if (!res.ok) throw new Error(await readError(res));
-
-        resultDiv.textContent = outputFormat === 'json' ? formatJson(await res.json()) : await res.text();
-      } catch (err) {
-        resultDiv.textContent = '失敗: ' + err.message;
-      } finally {
-        button.classList.remove('processing');
-        button.disabled = false;
-        button.textContent = '開始處理';
-      }
+    document.addEventListener('paste', e => {
+      const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+      if (item) { e.preventDefault(); attach(item.getAsFile()); }
     });
+
+    let dragDepth = 0;
+    window.addEventListener('dragenter', e => {
+      if (![...e.dataTransfer.types].includes('Files')) return;
+      dragDepth++; document.body.classList.add('dragging');
+    });
+    window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', e => {
+      e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+      attach(e.dataTransfer.files[0]);
+    });
+
+    // ---------- 輸入框 ----------
+    function autosize() {
+      promptEl.style.height = 'auto';
+      promptEl.style.height = Math.min(promptEl.scrollHeight + 4, 180) + 'px';
+    }
+    promptEl.addEventListener('input', autosize);
+    promptEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('composer').requestSubmit(); }
+    });
+    $('composer').addEventListener('submit', e => {
+      e.preventDefault();
+      send({ text: promptEl.value, image: state.image, imageUrl: state.imageUrl, fromComposer: true });
+    });
+    $('examples').addEventListener('click', e => {
+      if (e.target.matches('.chip')) send({ text: e.target.textContent, image: null });
+    });
+
+    // ---------- DOM 小工具 ----------
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function section(title, ...children) {
+      const wrap = el('div');
+      wrap.append(el('h3', '', title), ...children);
+      return wrap;
+    }
+
+    function rawJson(data) {
+      const details = el('details', 'raw');
+      details.append(el('summary', '', '原始 JSON'), el('pre', '', JSON.stringify(data, null, 2)));
+      return details;
+    }
+
+    const shortLabel = label => label.split(',')[0].trim();
+    const percent = p => (p * 100).toFixed(1) + '%';
+
+    function addTurn({ text, imageUrl }) {
+      $('welcome')?.remove();
+      const turn = el('article', 'turn');
+      const user = el('div', 'user');
+      if (imageUrl) {
+        const img = el('img');
+        img.src = imageUrl;
+        img.alt = '你上傳的圖片';
+        user.append(img);
+      }
+      user.append(el('p', '', text));
+      const ai = el('div', 'ai');
+      const pending = el('div', 'pending');
+      pending.append(el('span', 'spinner'), el('span', '', '筆墨正濃，AI 正在思考…'));
+      ai.append(pending);
+      turn.append(user, ai);
+      feed.append(turn);
+      turn.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+      return {
+        ai(render) {
+          pending.remove();
+          render(ai);
+          ai.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        },
+      };
+    }
+
+    // ---------- 呼叫 API ----------
+    async function call(path, { image, text }) {
+      const form = new FormData();
+      if (image) form.append('file', image);
+      if (text) form.append('prompt', text);
+      let res;
+      try {
+        res = await fetch(apiBase() + path, { method: 'POST', body: form });
+      } catch {
+        checkConnection();
+        throw { status: 0, message: `連不到本機 API（${apiBase()}）。請確認 API 已啟動，或點右上角修改位址。` };
+      }
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`;
+        try { const problem = await res.json(); message = problem.detail || problem.title || message; } catch { /* 非 JSON */ }
+        throw { status: res.status, message };
+      }
+      return res.json();
+    }
+
+    // ---------- 決定要做什麼 ----------
+    // 只有圖片 → 本機分析（分類 + OCR）；有文字 → Agent（有圖會自己決定要不要看圖）。
+    async function send({ text, image, imageUrl, kind, fromComposer }) {
+      if (state.busy) return;
+      text = (text || '').trim();
+      if (!text && !image) { promptEl.focus(); return; }
+
+      kind = kind || (text ? 'ask' : 'analyze');
+      const label = text || (kind === 'describe' ? '描述這張圖片' : '分析這張圖片');
+      const turn = addTurn({ text: label, imageUrl: image ? (imageUrl || URL.createObjectURL(image)) : null });
+      if (fromComposer) { promptEl.value = ''; autosize(); }
+
+      setBusy(true);
+      try {
+        if (kind === 'analyze') {
+          const data = await call('/api/ai/analyze', { image });
+          turn.ai(card => renderAnalysis(card, data, image));
+        } else if (kind === 'describe') {
+          const data = await call('/api/ai/describe-image', { image });
+          turn.ai(card => renderDescription(card, data));
+        } else {
+          try {
+            const data = await call('/api/ai/ask', { image, text });
+            turn.ai(card => renderAnswer(card, data));
+          } catch (err) {
+            if (err.status !== 503 || !image) throw err;
+            // 沒有 LLM 也不要空手而回：改顯示本機能做到的分析。
+            const data = await call('/api/ai/analyze', { image });
+            turn.ai(card => {
+              card.append(el('p', 'note', `${err.message} 先為你顯示本機的圖片分析結果：`));
+              renderAnalysis(card, data, image);
+            });
+          }
+        }
+      } catch (err) {
+        turn.ai(card => renderError(card, err));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function setBusy(busy) {
+      state.busy = busy;
+      sendBtn.disabled = busy;
+      sendBtn.textContent = busy ? '處理中…' : '送出';
+    }
+
+    // ---------- 呈現結果 ----------
+    function renderAnalysis(card, data, image) {
+      const top = data.classification.top;
+      const hasText = data.text && data.text.trim().length > 0;
+
+      if (hasText) {
+        card.append(section('圖中文字', el('pre', 'ocr', data.text)));
+      }
+
+      const bars = el('div', 'bars');
+      for (const p of top) {
+        const name = el('span', 'name', shortLabel(p.label));
+        name.title = p.label;
+        const track = el('div', 'track');
+        const fill = el('div', 'fill');
+        fill.style.width = Math.max(1, p.confidence * 100) + '%';
+        track.append(fill);
+        bars.append(name, track, el('span', 'pct', percent(p.confidence)));
+      }
+      const confident = top[0].confidence >= 0.3;
+      const headline = el('p', 'headline', (confident ? '' : '不太確定，可能是 ') + shortLabel(top[0].label));
+      headline.append(el('small', '', percent(top[0].confidence)));
+      const classification = section(hasText ? '圖片分類' : '看起來像', headline, bars);
+
+      if (hasText && !confident) {
+        // 文字圖片的分類通常沒有意義（例如把一段文字猜成「排笛」），收起來就好。
+        const details = el('details', 'raw');
+        details.append(el('summary', '', '圖片分類結果（信心偏低，已收起）'), classification);
+        card.append(details);
+      } else {
+        card.append(classification);
+      }
+
+      const chips = el('div', 'chips');
+      const followUps = hasText
+        ? [['這段文字在說什麼？', 'ask'], ['描述這張圖片', 'describe']]
+        : [['描述這張圖片', 'describe'], ['這是什麼？告訴我更多', 'ask']];
+      for (const [text, kind] of followUps) {
+        const chip = el('button', 'chip', text);
+        chip.type = 'button';
+        chip.addEventListener('click', () => send({ text, image, kind }));
+        chips.append(chip);
+      }
+      card.append(chips, rawJson(data));
+    }
+
+    function renderAnswer(card, data) {
+      card.append(el('p', 'answer', data.answer || '（沒有回應）'));
+      const meta = el('div', 'badges');
+      const tools = [...new Set(data.toolsUsed || [])];
+      if (tools.length) {
+        meta.append(el('span', '', '使用工具'));
+        for (const t of tools) meta.append(el('span', 'badge', TOOL_NAMES[t] || t));
+      }
+      meta.append(el('span', '', `模型：${data.model}`));
+      card.append(meta, rawJson(data));
+    }
+
+    function renderDescription(card, data) {
+      card.append(el('p', 'answer', data.description || '（沒有回應）'));
+      if (data.method === 'label-fallback') {
+        const note = el('p', 'note', '尚未安裝視覺模型，這段描述是依圖片分類結果推測的。安裝後就能直接看圖：');
+        note.append(el('code', '', 'ollama pull llava'));
+        card.append(note);
+      }
+      card.append(el('div', 'badges', `模型：${data.model}`), rawJson(data));
+    }
+
+    function renderError(card, err) {
+      card.append(el('p', 'error', '失敗：' + (err.message || String(err))));
+      if (err.status === 0) {
+        const note = el('p', 'note', '啟動本機 API：');
+        note.append(el('code', '', 'docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai'));
+        card.append(note);
+      }
+    }
   </script>
 </body>
 </html>
