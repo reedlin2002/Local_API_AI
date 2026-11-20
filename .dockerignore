@@ -1,0 +1,13 @@
+**/bin/
+**/obj/
+build/
+tests/
+docs/
+samples/
+.git/
+.github/
+.vs/
+.vscode/
+*.md
+Dockerfile
+.dockerignore
