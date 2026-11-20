@@ -386,6 +386,38 @@
       border-radius: inherit;
     }
 
+    /* API 連線設定 */
+    .api-settings {
+      margin-bottom: 2rem;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      padding: 0.8rem 1rem;
+      background: rgba(248, 249, 250, 0.8);
+    }
+
+    .api-settings summary {
+      cursor: pointer;
+      color: #2c3e50;
+      font-weight: 700;
+    }
+
+    .api-settings .form-group {
+      margin-top: 1rem;
+    }
+
+    .api-settings small {
+      color: #6c757d;
+      line-height: 1.6;
+    }
+
+    .api-settings code {
+      font-size: 0.85em;
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0 0.3em;
+    }
+
+    .status-ok { color: #2e7d32; }
+    .status-bad { color: #c62828; }
+
     /* 文字選擇效果 */
     ::selection {
       background: rgba(0, 0, 0, 0.1);
@@ -399,7 +431,20 @@
   <main class="ink-wash">
     <h1>AI 多模型測試</h1>
     <div class="subtitle">探索智慧之源，揮灑數位丹青</div>
-    
+
+    <details class="api-settings" id="apiSettings">
+      <summary>API 連線：<span id="apiStatus">檢查中…</span></summary>
+      <div class="form-group">
+        <label for="apiBaseInput">API 位址</label>
+        <input type="text" id="apiBaseInput" placeholder="http://localhost:5136" spellcheck="false" />
+        <small>
+          所有 AI 運算都在你自己的電腦上執行，這個頁面只負責介面。請先在本機啟動 API：<br />
+          <code>docker run --rm -p 127.0.0.1:5136:8080 ghcr.io/reedlin2002/local_api_ai</code><br />
+          或在專案資料夾執行 <code>dotnet run</code>。
+        </small>
+      </div>
+    </details>
+
     <form id="uploadForm">
       <div class="form-group">
         <label for="actionSelect">選擇 AI 模型</label>
@@ -430,6 +475,10 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <small id="hint" style="color:#6c757d;line-height:1.6"></small>
+      </div>
+
       <button type="submit">
         開始處理
       </button>
@@ -458,28 +507,83 @@
 
     const actionSelect = document.getElementById('actionSelect');
     const fileInput = document.getElementById('fileInput');
+    const fileLabel = document.getElementById('fileLabel');
     const promptInput = document.getElementById('promptInput');
     const outputFormatSelect = document.getElementById('outputFormatSelect');
     const resultDiv = document.getElementById('result');
+    const hint = document.getElementById('hint');
+    const apiBaseInput = document.getElementById('apiBaseInput');
+    const apiStatus = document.getElementById('apiStatus');
+    const apiSettings = document.getElementById('apiSettings');
+
+    // 每個功能需要的欄位與對應的 API
+    const ACTIONS = {
+      imageclassifier: { path: '/api/ai', file: 'required', prompt: false, fields: { model: 'imageclassifier' },
+        hint: '使用本機 ResNet50 模型辨識圖片主體，回傳前 5 名分類與機率。' },
+      textgeneration: { path: '/api/ai', file: false, prompt: true, fields: { model: 'textgeneration' },
+        hint: '交給本機 Ollama 文字模型回答（需要先執行 ollama serve）。' },
+      describe: { path: '/api/ai/describe-image', file: 'required', prompt: false, fields: {},
+        hint: '有安裝視覺模型（ollama pull llava）時直接看圖描述，沒有的話改用分類結果請文字模型描述。' },
+      ocr: { path: '/api/ai/ocr', file: 'required', prompt: false, fields: {},
+        hint: '用 Tesseract 辨識圖片中的英文與繁體中文。' },
+      agent: { path: '/api/ai/ask', file: 'optional', prompt: true, fields: {},
+        hint: '可以附一張圖片：Agent 會自己決定要不要呼叫 OCR 或圖片分類工具，再回答你的問題。' },
+    };
+
+    // ---- API 位址：同源 > ?api= > 上次設定 > 預設 localhost ----
+    const STORAGE_KEY = 'localai.apiBase';
+    const servedByApi = location.protocol.startsWith('http') && !location.hostname.endsWith('github.io');
+
+    function readStoredBase() {
+      try { return localStorage.getItem(STORAGE_KEY); } catch { return null; }
+    }
+
+    function storeBase(value) {
+      try { localStorage.setItem(STORAGE_KEY, value); } catch { /* 無痕模式等情況，忽略 */ }
+    }
+
+    function initialApiBase() {
+      const fromQuery = new URLSearchParams(location.search).get('api');
+      if (fromQuery) return fromQuery;
+      if (servedByApi) return location.origin;
+      return readStoredBase() || 'http://localhost:5136';
+    }
+
+    function apiBase() {
+      return (apiBaseInput.value.trim() || 'http://localhost:5136').replace(/\/+$/, '');
+    }
+
+    async function checkConnection() {
+      apiStatus.textContent = '檢查中…';
+      apiStatus.className = '';
+      try {
+        const res = await fetch(apiBase() + '/health', { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        apiStatus.textContent = '已連線 ✓';
+        apiStatus.className = 'status-ok';
+        return true;
+      } catch {
+        apiStatus.textContent = '未連線 ✗（展開查看如何啟動）';
+        apiStatus.className = 'status-bad';
+        apiSettings.open = true;
+        return false;
+      }
+    }
+
+    apiBaseInput.value = initialApiBase();
+    apiBaseInput.addEventListener('change', () => {
+      storeBase(apiBase());
+      checkConnection();
+    });
+    checkConnection();
 
     function toggleInputs() {
-      const action = actionSelect.value;
+      const action = ACTIONS[actionSelect.value];
 
-      // 重置所有輸入欄位
-      fileInput.parentElement.classList.add('input-hidden');
-      promptInput.parentElement.classList.add('input-hidden');
-      outputFormatSelect.parentElement.classList.add('input-hidden');
-
-      // 根據選擇的動作顯示對應的輸入欄位
-      if (action === 'imageclassifier' || action === 'describe' || action === 'ocr') {
-        fileInput.parentElement.classList.remove('input-hidden');
-      }
-      if (action === 'textgeneration' || action === 'agent') {
-        promptInput.parentElement.classList.remove('input-hidden');
-      }
-      if (action === 'agent') {
-        outputFormatSelect.parentElement.classList.remove('input-hidden');
-      }
+      fileInput.parentElement.classList.toggle('input-hidden', !action.file);
+      promptInput.parentElement.classList.toggle('input-hidden', !action.prompt);
+      fileLabel.textContent = action.file === 'optional' ? '上傳圖片檔案（選填）' : '上傳圖片檔案';
+      hint.textContent = action.hint;
 
       resultDiv.textContent = '墨硯已備，靜待您的指令...';
     }
@@ -487,105 +591,54 @@
     actionSelect.addEventListener('change', toggleInputs);
     toggleInputs();
 
+    async function readError(res) {
+      try {
+        const problem = await res.json();
+        return problem.detail || problem.title || `HTTP ${res.status}`;
+      } catch {
+        return `HTTP ${res.status}`;
+      }
+    }
+
+    function formatJson(json) {
+      return JSON.stringify(json, null, 2);
+    }
+
     document.getElementById('uploadForm').addEventListener('submit', async e => {
       e.preventDefault();
-      
+
       const button = e.target.querySelector('button');
       button.classList.add('processing');
       button.disabled = true;
       button.textContent = '正在處理中...';
-      
+
       resultDiv.textContent = '筆墨正濃，AI 正在為您潛心創作...';
 
-      const action = actionSelect.value;
+      const action = ACTIONS[actionSelect.value];
       const file = fileInput.files[0];
       const prompt = promptInput.value.trim();
       const outputFormat = outputFormatSelect.value;
 
-      const formData = new FormData();
-      let url = '';
-      let isJson = true;
-
       try {
-        if (action === 'imageclassifier') {
-          if (!file) {
-            throw new Error('請選擇圖片檔案');
-          }
-          formData.append('model', 'imageclassifier');
-          formData.append('file', file);
-          url = 'http://localhost:5136/api/ai';
-          isJson = true;
-        } else if (action === 'textgeneration') {
-          if (!prompt) {
-            throw new Error('請輸入提示文字');
-          }
-          formData.append('model', 'textgeneration');
-          formData.append('prompt', prompt);
-          url = 'http://localhost:5136/api/ai';
-          isJson = false;
-        } else if (action === 'describe') {
-          if (!file) {
-            throw new Error('請選擇圖片檔案');
-          }
-          formData.append('file', file);
-          url = 'http://localhost:5136/api/ai/describe-image';
-          isJson = true;
-        } else if (action === 'ocr') {
-          if (!file) {
-            throw new Error('請選擇圖片檔案');
-          }
-          formData.append('file', file);
-          url = 'http://localhost:5136/api/ai/ocr';
-          isJson = true;
-        } else if (action === 'agent') {
-          if (!prompt) {
-            throw new Error('請輸入提示文字');
-          }
-          url = 'http://localhost:5136/api/ai/ask';
-          isJson = outputFormat === 'json';
+        if (action.file === 'required' && !file) throw new Error('請選擇圖片檔案');
+        if (action.prompt && !prompt) throw new Error('請輸入提示文字');
 
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, output: outputFormat })
-          });
+        const formData = new FormData();
+        for (const [key, value] of Object.entries(action.fields)) formData.append(key, value);
+        if (action.prompt) formData.append('prompt', prompt);
+        if (action.file && file) formData.append('file', file);
 
-          if (!res.ok) {
-            throw new Error(`伺服器回應錯誤: ${res.status}`);
-          }
-
-          const raw = isJson ? await res.json() : await res.text();
-          resultDiv.textContent = isJson ? JSON.stringify(raw, null, 2) : raw;
-          return;
+        let res;
+        try {
+          res = await fetch(`${apiBase()}${action.path}?outputFormat=${outputFormat}`, { method: 'POST', body: formData });
+        } catch {
+          checkConnection();
+          throw new Error(`連不到 API（${apiBase()}）。請確認本機 API 已啟動。`);
         }
 
-        // 處理非 Agent 模式
-        const res = await fetch(url, {
-          method: 'POST',
-          body: formData
-        });
+        if (!res.ok) throw new Error(await readError(res));
 
-        if (!res.ok) {
-          throw new Error(`伺服器回應錯誤: ${res.status}`);
-        }
-
-        let output = '';
-        if (isJson) {
-          const json = await res.json();
-
-          if (action === 'describe' && json.description) {
-            output = json.description;
-          } else if (action === 'ocr' && json.text) {
-            output = json.text;
-          } else {
-            output = JSON.stringify(json, null, 2);
-          }
-        } else {
-          output = await res.text();
-        }
-
-        resultDiv.textContent = output;
-
+        resultDiv.textContent = outputFormat === 'json' ? formatJson(await res.json()) : await res.text();
       } catch (err) {
         resultDiv.textContent = '失敗: ' + err.message;
       } finally {

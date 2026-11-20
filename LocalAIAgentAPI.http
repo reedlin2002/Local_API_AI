@@ -1,6 +1,45 @@
-@LocalAIAgentAPI_HostAddress = http://localhost:5136
+@host = http://localhost:5136
 
-GET {{LocalAIAgentAPI_HostAddress}}/weatherforecast/
-Accept: application/json
+### Health
+GET {{host}}/health
 
-###
+### Classify an image
+POST {{host}}/api/ai?outputFormat=json
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="model"
+
+imageclassifier
+--b
+Content-Disposition: form-data; name="file"; filename="cat.jpg"
+Content-Type: image/jpeg
+
+< ./samples/cat.jpg
+--b--
+
+### OCR
+POST {{host}}/api/ai/ocr
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="file"; filename="ocr-chi.png"
+Content-Type: image/png
+
+< ./samples/ocr-chi.png
+--b--
+
+### Ask the agent (needs Ollama)
+POST {{host}}/api/ai/ask?outputFormat=text
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="prompt"
+
+What text is written in this image?
+--b
+Content-Disposition: form-data; name="file"; filename="ocr-eng.png"
+Content-Type: image/png
+
+< ./samples/ocr-eng.png
+--b--
