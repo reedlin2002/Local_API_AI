@@ -62,35 +62,29 @@ Local_API_AI 是一套在自己電腦上執行的 AI 推理服務，把圖片分
 ## 系統架構
 
 ```mermaid
-flowchart LR
-    subgraph Browser["瀏覽器"]
-        UI["Web 介面<br/>GitHub Pages 或 API 內建頁面"]
-    end
+flowchart TB
+    UI["瀏覽器 Web 介面<br/>GitHub Pages 或 API 內建頁面"]
 
-    subgraph Local["使用者本機"]
-        subgraph API["Local_API_AI（ASP.NET Core / Docker）"]
-            C["AIController<br/>驗證輸入、統一輸出"]
+    subgraph API["Local_API_AI · ASP.NET Core（本機或 Docker）"]
+        C["AIController<br/>輸入驗證 · 統一輸出 · 錯誤處理"]
+        subgraph InProc["程序內推理（不需網路）"]
             CLS["圖片分類<br/>ONNX Runtime · ResNet50"]
-            OCR["OCR<br/>Tesseract 引擎物件池"]
-            AG["Agent<br/>tool-calling 迴圈"]
-            DESC["圖像描述"]
-            OC["Ollama Client"]
+            OCR["OCR<br/>Tesseract"]
         end
-        OL[("Ollama<br/>llama2 · mistral · llava")]
+        subgraph LLM["LLM 功能"]
+            TXT["文字生成"]
+            DESC["圖像描述"]
+            AG["Agent"]
+        end
     end
 
-    UI -- "HTTP（CORS 白名單）" --> C
-    C --> CLS
-    C --> OCR
-    C --> AG
-    C --> DESC
-    AG -- "工具" --> CLS
-    AG -- "工具" --> OCR
-    DESC -. "缺視覺模型時" .-> CLS
-    AG --> OC
-    DESC --> OC
-    C -- "文字生成" --> OC
-    OC -- "REST" --> OL
+    OL[("Ollama<br/>本機 LLM")]
+
+    UI -->|"HTTP · CORS 白名單"| C
+    C --> InProc
+    C --> LLM
+    LLM -->|"REST"| OL
+    AG -.->|"工具呼叫"| InProc
 ```
 
 ### 前端
@@ -117,20 +111,15 @@ ASP.NET Core（.NET 10）提供 REST API，負責：
 ### Agent 決策流程
 
 ```mermaid
-flowchart TD
-    A["使用者問題<br/>可附一張圖片"] --> B{"有附圖片？"}
-    B -->|否| C["直接詢問 LLM"]
-    B -->|是| D["詢問 LLM，並提供工具<br/>classify_image · read_text_in_image"]
-
-    D --> E{"LLM 呼叫工具？"}
-    E -->|是| F["執行工具<br/>ResNet50 分類 / Tesseract OCR"]
-    F --> G["工具結果回傳給 LLM"]
-    G --> E
-    E -->|"已用過工具並作答"| H["回傳答案與使用過的工具"]
-
-    E -->|"從未呼叫工具<br/>或模型不支援工具"| I["伺服器先執行全部工具"]
-    I --> J["把分類結果與 OCR 文字<br/>放進提示詞再詢問 LLM"]
-    J --> H
+flowchart LR
+    A["使用者問題<br/>（可附圖片）"] --> B{"有附圖片？"}
+    B -->|否| C["LLM 直接回答"]
+    B -->|是| D["LLM + 工具<br/>classify_image<br/>read_text_in_image"]
+    D -->|"呼叫工具"| F["執行分類 / OCR<br/>結果回傳 LLM"]
+    F --> D
+    D -->|"根據工具結果作答"| H["回傳答案<br/>與使用過的工具"]
+    D -->|"沒呼叫工具<br/>或不支援工具"| I["伺服器先跑全部工具<br/>再把結果交給 LLM"]
+    I --> H
     C --> H
 ```
 
