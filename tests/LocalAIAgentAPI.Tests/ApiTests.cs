@@ -98,6 +98,23 @@ public sealed class ApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Contains("這是我用來測試", text);
     }
 
+    [Theory]
+    [InlineData("ocr-eng.png", "quick brown fox")]
+    [InlineData("cat.jpg", "")]
+    public async Task Analyze_returns_classification_and_text_together(string sample, string expectedText)
+    {
+        var response = await _client.PostAsync("/api/ai/analyze", Samples.Form().WithFile(sample));
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(5, json.GetProperty("classification").GetProperty("top").GetArrayLength());
+        var text = json.GetProperty("text").GetString()!;
+        if (expectedText.Length == 0)
+            Assert.Equal("", text);
+        else
+            Assert.Contains(expectedText, text, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task Text_generation_uses_configured_model()
     {

@@ -27,6 +27,7 @@ check "front end" "<html" "$(curl -fsS "$base/")"
 check "classify cat" "cat" "$(curl -fsS -F model=imageclassifier -F "file=@$samples/cat.jpg" "$base/api/ai")"
 check "classify dog" "retriever" "$(curl -fsS -F model=imageclassifier -F "file=@$samples/dog.jpeg" "$base/api/ai")"
 check "ocr english" "quick brown fox" "$(curl -fsS -F "file=@$samples/ocr-eng.png" "$base/api/ai/ocr")"
+check "analyze (classify + ocr)" "quick brown fox" "$(curl -fsS -F "file=@$samples/ocr-eng.png" "$base/api/ai/analyze")"
 check "bad image is 400" "400" "$(curl -s -o /dev/null -w '%{http_code}' -F model=imageclassifier -F "file=@$0" "$base/api/ai")"
 
 echo "All smoke tests passed."

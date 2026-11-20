@@ -52,6 +52,28 @@ public sealed class AIController(
         }
     }
 
+    /// <summary>Everything the local models can tell about an image in one call: classification and OCR, run in parallel. No Ollama needed.</summary>
+    [HttpPost("analyze")]
+    public async Task<IActionResult> Analyze(
+        IFormFile file,
+        [FromQuery] string outputFormat = "json",
+        CancellationToken cancellationToken = default)
+    {
+        var image = await ReadAsync(file, cancellationToken);
+        var result = await Timed("analyze", async () =>
+        {
+            var classification = classifier.ClassifyAsync(image, TopK, cancellationToken);
+            var text = ocr.RecognizeTextAsync(image, cancellationToken);
+            await Task.WhenAll(classification, text);
+            return new ImageAnalysis(await classification, await text);
+        });
+
+        var plain = string.Join("\n", result.Classification.Top.Select((p, i) => $"{i + 1}. {p.Label} ({p.Confidence:P1})"));
+        if (result.Text.Length > 0)
+            plain = $"{result.Text}\n\n{plain}";
+        return Respond(outputFormat, result, plain);
+    }
+
     [HttpPost("describe-image")]
     public async Task<IActionResult> DescribeImage(
         IFormFile file,
@@ -160,3 +182,5 @@ public sealed class AIController(
 
     private sealed record BatchItem(string File, string? Label, float? Confidence, string? Error);
 }
+
+public sealed record ImageAnalysis(ClassificationResult Classification, string Text);
