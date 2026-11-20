@@ -11,6 +11,12 @@ permissions:
   contents: read
   packages: write
 
+# A newer push to the same branch cancels the older build, so `latest` always ends up
+# pointing at the newest commit.
+concurrency:
+  group: container-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/local_api_ai
 
