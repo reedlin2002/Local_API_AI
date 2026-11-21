@@ -4,24 +4,23 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Tesseract only ships x86/x64 native binaries. -->
-    <PlatformTarget>x64</PlatformTarget>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <DefaultItemExcludes>$(DefaultItemExcludes);tests/**;build/**;samples/**;docs/**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
+    <!-- ExcludeAssets="build": the package would copy its Latin-only models next to the binary; we ship our own Chinese set in Models/ocr. -->
+    <PackageReference Include="RapidOcrNet" Version="4.2.0" ExcludeAssets="build" />
     <PackageReference Include="SkiaSharp" Version="4.157.0" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.157.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
-    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <None Update="Models\resnet50-v2-7.onnx" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Models\imagenet_labels.txt" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="tessdata\*.traineddata" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Models\ocr\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

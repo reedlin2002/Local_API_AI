@@ -7,14 +7,11 @@ RUN dotnet restore LocalAIAgentAPI.csproj -r linux-x64
 COPY . .
 RUN dotnet publish LocalAIAgentAPI.csproj -c Release -r linux-x64 --self-contained false -o /app --no-restore
 
+# All models run on ONNX Runtime and SkiaSharp, whose Linux binaries ship in the NuGet packages,
+# so the runtime image needs no extra system libraries.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libtesseract5 \
-    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
-COPY scripts/link-tesseract-linux.sh /tmp/
-RUN sh /tmp/link-tesseract-linux.sh /app && rm /tmp/link-tesseract-linux.sh
 
 # Ollama runs on the host, not in this container (Docker Desktop resolves host.docker.internal;
 # on Linux add --add-host=host.docker.internal:host-gateway).

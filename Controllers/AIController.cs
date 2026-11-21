@@ -13,13 +13,13 @@ public sealed class AIController(
     IOcrService ocr,
     IOllamaClient ollama,
     IImageDescriber describer,
-    IAgentService agent,
+    IAssistantService assistant,
     IOptions<OllamaOptions> ollamaOptions,
     ILogger<AIController> logger) : ControllerBase
 {
     private const int TopK = 5;
 
-    /// <summary>Generic entry point. model = imageclassifier | textgeneration | agent.</summary>
+    /// <summary>Generic entry point. model = imageclassifier | textgeneration | agent (the assistant).</summary>
     [HttpPost]
     public async Task<IActionResult> ProcessRequest(
         [FromForm] string model,
@@ -38,7 +38,7 @@ public sealed class AIController(
             case "textgeneration":
                 if (string.IsNullOrWhiteSpace(prompt))
                     return BadInput("Prompt is required for text generation.");
-                var textModel = ollamaOptions.Value.TextModel;
+                var textModel = ollamaOptions.Value.ForText;
                 var text = await Timed("textgeneration", () => ollama.GenerateAsync(textModel, prompt, null, cancellationToken));
                 return Respond(outputFormat, new { response = text, model = textModel }, text);
 
@@ -74,14 +74,16 @@ public sealed class AIController(
         return Respond(outputFormat, result, plain);
     }
 
+    /// <summary>Describe an image with the multimodal model. Optional <c>prompt</c> replaces the default instruction (e.g. to ask for Chinese).</summary>
     [HttpPost("describe-image")]
     public async Task<IActionResult> DescribeImage(
         IFormFile file,
+        [FromForm] string? prompt,
         [FromQuery] string outputFormat = "json",
         CancellationToken cancellationToken = default)
     {
         var image = await ReadAsync(file, cancellationToken);
-        var result = await Timed("describe-image", () => describer.DescribeAsync(image, cancellationToken));
+        var result = await Timed("describe-image", () => describer.DescribeAsync(image, prompt, cancellationToken));
         return Respond(outputFormat, result, result.Description);
     }
 
@@ -125,7 +127,7 @@ public sealed class AIController(
         return Respond(outputFormat, new { text }, text);
     }
 
-    /// <summary>Ask the agent. Attach an optional image and it can call OCR / classification as tools.</summary>
+    /// <summary>Ask the assistant. With an image attached, OCR reads its text and the multimodal model looks at it.</summary>
     [HttpPost("ask")]
     public Task<IActionResult> AskAgent(
         [FromForm] string prompt,
@@ -149,7 +151,7 @@ public sealed class AIController(
     private async Task<IActionResult> AskAsync(string prompt, IFormFile? file, string outputFormat, CancellationToken cancellationToken)
     {
         var image = file is null ? null : await ReadAsync(file, cancellationToken);
-        var result = await Timed("agent", () => agent.AskAsync(prompt, image, cancellationToken));
+        var result = await Timed("assistant", () => assistant.AskAsync(prompt, image, cancellationToken));
         return Respond(outputFormat, result, result.Answer);
     }
 

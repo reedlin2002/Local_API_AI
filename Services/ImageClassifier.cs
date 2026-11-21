@@ -132,11 +132,47 @@ public static class ImageDecoding
         return ApplyOrientation(bitmap, codec.EncodedOrigin);
     }
 
-    /// <summary>Cheap header-only check used before handing bytes to Tesseract or Ollama.</summary>
+    /// <summary>Cheap header-only check used before handing bytes to OCR or Ollama.</summary>
     public static void EnsureValid(byte[] bytes)
     {
         using var data = SKData.CreateCopy(bytes);
         using var codec = SKCodec.Create(data) ?? throw new InvalidImageException(UnsupportedMessage);
+    }
+
+    /// <summary>
+    /// Downscales so the long side is at most <paramref name="maxSide"/> pixels (EXIF orientation applied).
+    /// A vision model's prompt cost grows with pixel count, so a 4000 px phone photo would otherwise
+    /// cost thousands of image tokens. Images that are already small and upright pass through unchanged.
+    /// </summary>
+    public static byte[] ShrinkForVision(byte[] bytes, int maxSide)
+    {
+        using var data = SKData.CreateCopy(bytes);
+        using var codec = SKCodec.Create(data) ?? throw new InvalidImageException(UnsupportedMessage);
+        var format = codec.EncodedFormat;
+        if (Math.Max(codec.Info.Width, codec.Info.Height) <= maxSide
+            && codec.EncodedOrigin == SKEncodedOrigin.TopLeft
+            && format is SKEncodedImageFormat.Jpeg or SKEncodedImageFormat.Png)
+        {
+            return bytes;
+        }
+
+        using var source = Decode(bytes);
+        var scale = Math.Min(1f, (float)maxSide / Math.Max(source.Width, source.Height));
+        var width = Math.Max(1, (int)MathF.Round(source.Width * scale));
+        var height = Math.Max(1, (int)MathF.Round(source.Height * scale));
+
+        using var resized = new SKBitmap(new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul));
+        using (var canvas = new SKCanvas(resized))
+        using (var image = SKImage.FromBitmap(source))
+        {
+            canvas.Clear(SKColors.White);
+            canvas.DrawImage(image, SKRect.Create(width, height), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+        }
+
+        // PNG keeps screenshots and text crisp; everything else becomes JPEG.
+        var output = format == SKEncodedImageFormat.Png ? SKEncodedImageFormat.Png : SKEncodedImageFormat.Jpeg;
+        using var encoded = SKImage.FromBitmap(resized).Encode(output, 90);
+        return encoded.ToArray();
     }
 
     private static SKBitmap ApplyOrientation(SKBitmap bitmap, SKEncodedOrigin origin)

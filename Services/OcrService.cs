@@ -1,8 +1,7 @@
-using System.Text.RegularExpressions;
 using LocalAIAgentAPI.Infrastructure;
 using Microsoft.Extensions.ObjectPool;
 using Microsoft.Extensions.Options;
-using Tesseract;
+using RapidOcrNet;
 
 namespace LocalAIAgentAPI.Services;
 
@@ -12,18 +11,26 @@ public interface IOcrService
 }
 
 /// <summary>
-/// Creating a TesseractEngine loads the traineddata files (300-600 ms) and an engine is not
-/// thread-safe, so engines are pooled: each request borrows one and returns it afterwards.
+/// PP-OCRv5 mobile (ONNX, via RapidOcrNet). On OmniDocBench its error rate is about a fifth of Tesseract's,
+/// and it reads Traditional Chinese reliably. Engines are pooled because loading the models takes ~300 ms.
 /// </summary>
-public sealed partial class TesseractOcrService : IOcrService, IDisposable
+public sealed class PaddleOcrService : IOcrService, IDisposable
 {
-    private readonly ObjectPool<TesseractEngine> _engines;
+    // The text-line orientation classifier costs 2-3x latency and only matters for upside-down text.
+    private static readonly RapidOcrOptions DetectOptions = RapidOcrOptions.Default with { DoAngle = false };
 
-    public TesseractOcrService(IOptions<InferenceOptions> options, IHostEnvironment environment)
+    private readonly ObjectPool<RapidOcr> _engines;
+
+    public PaddleOcrService(IOptions<InferenceOptions> options, IHostEnvironment environment)
     {
-        var tessdata = ContentPath.Resolve(environment, options.Value.TessdataPath);
-        var provider = new DefaultObjectPoolProvider { MaximumRetained = Math.Max(2, Environment.ProcessorCount / 2) };
-        _engines = provider.Create(new EnginePolicy(tessdata, options.Value.OcrLanguages));
+        var o = options.Value;
+        var policy = new EnginePolicy(
+            ContentPath.Resolve(environment, o.OcrDetectorPath),
+            ContentPath.Resolve(environment, o.OcrClassifierPath),
+            ContentPath.Resolve(environment, o.OcrRecognizerPath),
+            ContentPath.Resolve(environment, o.OcrDictionaryPath),
+            Math.Max(1, Environment.ProcessorCount / 2));
+        _engines = new DefaultObjectPoolProvider { MaximumRetained = 2 }.Create(policy);
     }
 
     public Task<string> RecognizeTextAsync(byte[] image, CancellationToken cancellationToken)
@@ -32,12 +39,11 @@ public sealed partial class TesseractOcrService : IOcrService, IDisposable
 
         return Task.Run(() =>
         {
-            using var pix = LoadPix(image);
+            using var bitmap = ImageDecoding.Decode(image);
             var engine = _engines.Get();
             try
             {
-                using var page = engine.Process(pix);
-                return RemoveSpacesBetweenCjk(page.GetText()).Trim();
+                return engine.Detect(bitmap, DetectOptions, cancellationToken).StrRes.Trim();
             }
             finally
             {
@@ -46,30 +52,18 @@ public sealed partial class TesseractOcrService : IOcrService, IDisposable
         }, cancellationToken);
     }
 
-    private static Pix LoadPix(byte[] image)
-    {
-        try
-        {
-            return Pix.LoadFromMemory(image);
-        }
-        catch (IOException e)
-        {
-            throw new InvalidImageException("OCR 引擎無法讀取這張圖片，請改用 PNG 或 JPG。", e);
-        }
-    }
-
-    /// <summary>Tesseract's chi_tra model puts a space between every character ("你 好 ，").</summary>
-    internal static string RemoveSpacesBetweenCjk(string text) => CjkGap().Replace(text, string.Empty);
-
-    [GeneratedRegex(@"(?<=[\p{IsCJKUnifiedIdeographs}\p{IsCJKSymbolsandPunctuation}＀-￯])[ \t]+(?=[\p{IsCJKUnifiedIdeographs}\p{IsCJKSymbolsandPunctuation}＀-￯])")]
-    private static partial Regex CjkGap();
-
     public void Dispose() => (_engines as IDisposable)?.Dispose();
 
-    private sealed class EnginePolicy(string tessdataPath, string languages) : PooledObjectPolicy<TesseractEngine>
+    private sealed class EnginePolicy(string detector, string classifier, string recognizer, string dictionary, int threads)
+        : PooledObjectPolicy<RapidOcr>
     {
-        public override TesseractEngine Create() => new(tessdataPath, languages, EngineMode.LstmOnly);
+        public override RapidOcr Create()
+        {
+            var engine = new RapidOcr();
+            engine.InitModels(detector, classifier, recognizer, dictionary, threads);
+            return engine;
+        }
 
-        public override bool Return(TesseractEngine engine) => true;
+        public override bool Return(RapidOcr engine) => true;
     }
 }

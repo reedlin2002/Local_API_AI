@@ -37,7 +37,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(policy => policy
     .AllowAnyHeader()));
 
 builder.Services.AddSingleton<IImageClassifier, OnnxImageClassifier>();
-builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
+builder.Services.AddSingleton<IOcrService, PaddleOcrService>();
 builder.Services.AddHttpClient<IOllamaClient, OllamaClient>((sp, http) =>
 {
     var o = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
@@ -45,7 +45,8 @@ builder.Services.AddHttpClient<IOllamaClient, OllamaClient>((sp, http) =>
     http.Timeout = TimeSpan.FromSeconds(o.TimeoutSeconds);
 });
 builder.Services.AddScoped<IImageDescriber, ImageDescriber>();
-builder.Services.AddScoped<IAgentService, AgentService>();
+builder.Services.AddScoped<IAssistantService, AssistantService>();
+builder.Services.AddHostedService<OllamaWarmUp>();
 
 var app = builder.Build();
 

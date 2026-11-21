@@ -13,9 +13,3 @@ public sealed class OllamaModelNotFoundException(string model)
 {
     public string Model { get; } = model;
 }
-
-public sealed class OllamaToolsNotSupportedException(string model)
-    : UpstreamUnavailableException($"Ollama 模型 '{model}' 不支援 tool calling。")
-{
-    public string Model { get; } = model;
-}

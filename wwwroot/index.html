@@ -287,7 +287,7 @@
           <div class="way">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" aria-hidden="true"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg>
             <strong>圖片＋問題</strong>
-            <span>Agent 自己決定要看圖、讀字，再回答你。</span>
+            <span>先精準讀出圖中文字，再讓模型看圖回答你。</span>
           </div>
         </div>
         <div class="examples" id="examples">
@@ -338,7 +338,7 @@
     const sendBtn = $('sendBtn');
     const state = { image: null, imageUrl: null, busy: false };
 
-    const TOOL_NAMES = { classify_image: '圖片分類', read_text_in_image: '文字辨識 OCR' };
+    const STEP_NAMES = { ocr: '文字辨識', vision: '看圖' };
 
     // ---------- API 位址與連線狀態 ----------
     const STORAGE_KEY = 'localai.apiBase';
@@ -521,15 +521,14 @@
     }
 
     // ---------- 決定要做什麼 ----------
-    // 只有圖片 → 本機分析（分類 + OCR）；有文字 → Agent（有圖會自己決定要不要看圖）。
-    async function send({ text, image, imageUrl, kind, fromComposer }) {
+    // 只有圖片 → 本機分析（分類 + 文字辨識，不需要 Ollama）；有文字 → 助理（有圖時先讀字、再看圖回答）。
+    async function send({ text, image, imageUrl, fromComposer }) {
       if (state.busy) return;
       text = (text || '').trim();
       if (!text && !image) { promptEl.focus(); return; }
 
-      kind = kind || (text ? 'ask' : 'analyze');
-      const label = text || (kind === 'describe' ? '描述這張圖片' : '分析這張圖片');
-      const turn = addTurn({ text: label, imageUrl: image ? (imageUrl || URL.createObjectURL(image)) : null });
+      const kind = text ? 'ask' : 'analyze';
+      const turn = addTurn({ text: text || '分析這張圖片', imageUrl: image ? (imageUrl || URL.createObjectURL(image)) : null });
       if (fromComposer) { promptEl.value = ''; autosize(); }
 
       setBusy(true);
@@ -537,9 +536,6 @@
         if (kind === 'analyze') {
           const data = await call('/api/ai/analyze', { image });
           turn.ai(card => renderAnalysis(card, data, image));
-        } else if (kind === 'describe') {
-          const data = await call('/api/ai/describe-image', { image });
-          turn.ai(card => renderDescription(card, data));
         } else {
           try {
             const data = await call('/api/ai/ask', { image, text });
@@ -602,12 +598,12 @@
 
       const chips = el('div', 'chips');
       const followUps = hasText
-        ? [['這段文字在說什麼？', 'ask'], ['描述這張圖片', 'describe']]
-        : [['描述這張圖片', 'describe'], ['這是什麼？告訴我更多', 'ask']];
-      for (const [text, kind] of followUps) {
+        ? ['這段文字在說什麼？', '描述這張圖片']
+        : ['描述這張圖片', '這是什麼？告訴我更多'];
+      for (const text of followUps) {
         const chip = el('button', 'chip', text);
         chip.type = 'button';
-        chip.addEventListener('click', () => send({ text, image, kind }));
+        chip.addEventListener('click', () => send({ text, image }));
         chips.append(chip);
       }
       card.append(chips, rawJson(data));
@@ -616,23 +612,13 @@
     function renderAnswer(card, data) {
       card.append(el('p', 'answer', data.answer || '（沒有回應）'));
       const meta = el('div', 'badges');
-      const tools = [...new Set(data.toolsUsed || [])];
-      if (tools.length) {
-        meta.append(el('span', '', '使用工具'));
-        for (const t of tools) meta.append(el('span', 'badge', TOOL_NAMES[t] || t));
+      const steps = data.steps || [];
+      if (steps.length) {
+        meta.append(el('span', '', '處理步驟'));
+        for (const s of steps) meta.append(el('span', 'badge', STEP_NAMES[s] || s));
       }
       meta.append(el('span', '', `模型：${data.model}`));
       card.append(meta, rawJson(data));
-    }
-
-    function renderDescription(card, data) {
-      card.append(el('p', 'answer', data.description || '（沒有回應）'));
-      if (data.method === 'label-fallback') {
-        const note = el('p', 'note', '尚未安裝視覺模型，這段描述是依圖片分類結果推測的。安裝後就能直接看圖：');
-        note.append(el('code', '', 'ollama pull llava'));
-        card.append(note);
-      }
-      card.append(el('div', 'badges', `模型：${data.model}`), rawJson(data));
     }
 
     function renderError(card, err) {

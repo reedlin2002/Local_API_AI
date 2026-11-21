@@ -29,7 +29,7 @@ Content-Type: image/png
 < ./samples/ocr-chi.png
 --b--
 
-### Ask the agent (needs Ollama)
+### Ask about an image (OCR + vision, needs Ollama)
 POST {{host}}/api/ai/ask?outputFormat=text
 Content-Type: multipart/form-data; boundary=b
 
