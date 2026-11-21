@@ -3,43 +3,31 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LocalAIAgentAPI.Infrastructure;
+using Microsoft.Extensions.Options;
 
 namespace LocalAIAgentAPI.Services;
 
 public sealed record ChatMessage(
     [property: JsonPropertyName("role")] string Role,
     [property: JsonPropertyName("content")] string Content,
-    [property: JsonPropertyName("tool_calls")] IReadOnlyList<ToolCall>? ToolCalls = null,
-    [property: JsonPropertyName("tool_name")] string? ToolName = null);
-
-public sealed record ToolCall([property: JsonPropertyName("function")] FunctionCall Function);
-
-public sealed record FunctionCall(
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("arguments")] JsonElement? Arguments = null);
-
-public sealed record ToolDefinition(
-    [property: JsonPropertyName("type")] string Type,
-    [property: JsonPropertyName("function")] FunctionDefinition Function)
+    [property: JsonPropertyName("images")] IReadOnlyList<string>? Images = null)
 {
-    public static ToolDefinition Create(string name, string description) =>
-        new("function", new FunctionDefinition(name, description, new { type = "object", properties = new { } }));
+    public static ChatMessage User(string content, byte[]? image = null) =>
+        new("user", content, image is null ? null : [Convert.ToBase64String(image)]);
 }
-
-public sealed record FunctionDefinition(
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("description")] string Description,
-    [property: JsonPropertyName("parameters")] object Parameters);
 
 public interface IOllamaClient
 {
     Task<string> GenerateAsync(string model, string prompt, IReadOnlyList<byte[]>? images, CancellationToken cancellationToken);
 
-    Task<ChatMessage> ChatAsync(string model, IReadOnlyList<ChatMessage> messages, IReadOnlyList<ToolDefinition>? tools, CancellationToken cancellationToken);
+    Task<string> ChatAsync(string model, IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken);
+
+    /// <summary>Asks Ollama to load the model into memory without generating anything.</summary>
+    Task WarmUpAsync(string model, CancellationToken cancellationToken);
 }
 
 /// <summary>Typed HttpClient for the Ollama REST API (base address and timeout come from <see cref="OllamaOptions"/>).</summary>
-public sealed class OllamaClient(HttpClient http) : IOllamaClient
+public sealed class OllamaClient(HttpClient http, IOptions<OllamaOptions> options) : IOllamaClient
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -53,7 +41,10 @@ public sealed class OllamaClient(HttpClient http) : IOllamaClient
             model,
             prompt,
             stream = false,
+            think = false,
+            keep_alive = options.Value.KeepAlive,
             images = images?.Select(Convert.ToBase64String).ToArray(),
+            options = Sampling(hasImage: images is { Count: > 0 }),
         };
 
         using var doc = await PostAsync("api/generate", model, request, cancellationToken);
@@ -62,16 +53,37 @@ public sealed class OllamaClient(HttpClient http) : IOllamaClient
             : string.Empty;
     }
 
-    public async Task<ChatMessage> ChatAsync(string model, IReadOnlyList<ChatMessage> messages, IReadOnlyList<ToolDefinition>? tools, CancellationToken cancellationToken)
+    public async Task<string> ChatAsync(string model, IReadOnlyList<ChatMessage> messages, CancellationToken cancellationToken)
     {
-        var request = new { model, messages, tools, stream = false };
+        var request = new
+        {
+            model,
+            messages,
+            stream = false,
+            think = false,
+            keep_alive = options.Value.KeepAlive,
+            options = Sampling(hasImage: messages.Any(m => m.Images is { Count: > 0 })),
+        };
 
         using var doc = await PostAsync("api/chat", model, request, cancellationToken);
-        var message = doc.RootElement.TryGetProperty("message", out var m)
-            ? m.Deserialize<ChatMessage>(Json)
-            : null;
-        return message ?? new ChatMessage("assistant", string.Empty);
+        return doc.RootElement.TryGetProperty("message", out var message)
+               && message.TryGetProperty("content", out var content)
+            ? (content.GetString() ?? string.Empty).Trim()
+            : string.Empty;
     }
+
+    public async Task WarmUpAsync(string model, CancellationToken cancellationToken)
+    {
+        using var _ = await PostAsync("api/generate", model, new { model, keep_alive = options.Value.KeepAlive }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Qwen3.5 non-thinking settings from the model card. Thinking stays off: the 2B model is prone to
+    /// thinking loops and it would multiply latency on a laptop GPU.
+    /// </summary>
+    private object Sampling(bool hasImage) => hasImage
+        ? new { temperature = 0.7, top_p = 0.8, top_k = 20, presence_penalty = 1.5, num_ctx = options.Value.ContextLength }
+        : new { temperature = 1.0, top_p = 1.0, top_k = 20, presence_penalty = 2.0, num_ctx = options.Value.ContextLength };
 
     private async Task<JsonDocument> PostAsync(string path, string model, object payload, CancellationToken cancellationToken)
     {
@@ -95,8 +107,6 @@ public sealed class OllamaClient(HttpClient http) : IOllamaClient
             var error = ReadError(body);
             if (response.StatusCode == HttpStatusCode.NotFound && error.Contains("not found", StringComparison.OrdinalIgnoreCase))
                 throw new OllamaModelNotFoundException(model);
-            if (error.Contains("does not support tools", StringComparison.OrdinalIgnoreCase))
-                throw new OllamaToolsNotSupportedException(model);
 
             throw new UpstreamUnavailableException($"Ollama 回應 {(int)response.StatusCode}：{error}");
         }
